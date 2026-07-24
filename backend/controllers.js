@@ -32,7 +32,7 @@ export const loginWithTelegram = async (req, res) => {
 
     // Check if there's a pending invite for this user
     const pendingInvite = await PendingInvite.findOne({
-      telegramId: userInfo.id,
+      telegramId: userInfo.id.toString(),
       status: 'pending'
     });
 
@@ -42,6 +42,7 @@ export const loginWithTelegram = async (req, res) => {
       if (couple && !couple.user2) {
         couple.user2 = user._id;
         couple.nickname2 = user.firstName;
+        couple.isPaired = true;
         couple.pendingInvite = null;
         await couple.save();
 
@@ -54,19 +55,31 @@ export const loginWithTelegram = async (req, res) => {
         pendingInvite.acceptedAt = new Date();
         await pendingInvite.save();
 
-        // Notify both users
-        await botInvite.notifyCoupleMembers(couple._id, `
-🎉 <b>You're connected!</b>
+        // Award welcome bonus
+        user.coins = (user.coins || 0) + 100;
+        user.xp = (user.xp || 0) + 50;
+        await user.save();
 
-${user.firstName} has accepted your invitation and joined LoveVerse!
+        // Notify both users
+        const inviter = await User.findById(couple.user1);
+        if (inviter) {
+          try {
+            await botInvite.notifyUser(inviter.telegramId, `
+🎉 <b>${user.firstName} has accepted your invitation!</b>
+
+You and ${user.firstName} are now connected on LoveVerse!
 
 Start your journey together:
-• 💬 Chat with each other
-• 🎮 Play games
-• 📸 Share memories
+💬 Chat: ${APP_URL}/chat
+🎮 Play games: ${APP_URL}/games
+📸 Share memories: ${APP_URL}/memories
 
-${APP_URL}
-        `);
+Enjoy! 💕
+            `);
+          } catch (error) {
+            console.error('Failed to notify inviter:', error);
+          }
+        }
       }
     }
 
@@ -169,6 +182,15 @@ export const createCouple = async (req, res) => {
   try {
     const { coupleName, nickname, anniversaryDate } = req.body;
     
+    // Check if user already has a couple
+    const existingUser = await User.findById(req.userId);
+    if (existingUser.coupleId) {
+      return res.status(400).json({
+        success: false,
+        error: 'You already have a couple.',
+      });
+    }
+    
     const couple = await CoupleService.createCouple(
       req.userId,
       coupleName,
@@ -230,11 +252,23 @@ export const invitePartner = async (req, res) => {
     }
 
     const inviterName = couple.user1 ? couple.user1.firstName : 'Your partner';
-    
-    // Generate pairing code for the invite
     const pairingCode = generatePairingCode();
     
-    // Send invite via bot
+    // Check if user already has a pending invite
+    const existingInvite = await PendingInvite.findOne({
+      coupleId: coupleId,
+      username: username.replace('@', '').trim(),
+      status: 'pending'
+    });
+
+    if (existingInvite) {
+      return res.status(400).json({
+        success: false,
+        error: 'User already has a pending invite'
+      });
+    }
+    
+    // Send invite via bot (handles both users who have/haven't started the bot)
     const result = await botInvite.sendInviteByUsername(
       username, 
       coupleId, 
@@ -252,11 +286,16 @@ export const invitePartner = async (req, res) => {
       };
       await couple.save();
       
+      // Generate the deep link for the response
+      const deepLink = botInvite.generateInviteLink(coupleId);
+      
       return res.status(200).json({
         success: true,
         message: result.message,
         couple,
-        pairingCode
+        pairingCode,
+        deepLink: deepLink,
+        type: result.type || 'deep_link'
       });
     } else {
       return res.status(400).json({
@@ -276,11 +315,35 @@ export const invitePartner = async (req, res) => {
 export const joinCouple = async (req, res) => {
   try {
     const { pairingCode } = req.body;
+    
+    if (!pairingCode) {
+      return res.status(400).json({
+        success: false,
+        error: 'Pairing code is required'
+      });
+    }
+    
     const couple = await CoupleService.joinCouple(req.userId, pairingCode);
     
-    res.json({ success: true, couple });
+    // Award welcome bonus
+    const user = await User.findById(req.userId);
+    user.coins = (user.coins || 0) + 100;
+    user.xp = (user.xp || 0) + 50;
+    await user.save();
+    
+    res.json({ 
+      success: true, 
+      couple,
+      bonus: {
+        coins: 100,
+        xp: 50,
+      }
+    });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 };
 
@@ -366,6 +429,13 @@ export const acceptInvite = async (req, res) => {
     
     // Check if user already has a couple
     const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
     if (user.coupleId) {
       return res.status(400).json({
         success: false,
@@ -376,6 +446,7 @@ export const acceptInvite = async (req, res) => {
     // Add user as second partner
     couple.user2 = userId;
     couple.nickname2 = user.firstName;
+    couple.isPaired = true;
     couple.pendingInvite = null;
     await couple.save();
     
@@ -389,19 +460,32 @@ export const acceptInvite = async (req, res) => {
     user.xp = (user.xp || 0) + 50;
     await user.save();
     
+    // Mark pending invite as accepted
+    await PendingInvite.updateMany(
+      { coupleId: coupleId, telegramId: user.telegramId },
+      { status: 'accepted', acceptedAt: new Date() }
+    );
+    
     // Notify both users
-    await botInvite.notifyCoupleMembers(couple._id, `
-🎉 <b>You're connected!</b>
+    const inviter = await User.findById(couple.user1);
+    if (inviter) {
+      try {
+        await botInvite.notifyUser(inviter.telegramId, `
+🎉 <b>${user.firstName} has accepted your invitation!</b>
 
-${user.firstName} has accepted the invitation and joined LoveVerse!
+You and ${user.firstName} are now connected on LoveVerse!
 
 Start your journey together:
-• 💬 Chat with each other
-• 🎮 Play games
-• 📸 Share memories
+💬 Chat: ${APP_URL}/chat
+🎮 Play games: ${APP_URL}/games
+📸 Share memories: ${APP_URL}/memories
 
-${APP_URL}
-    `);
+Enjoy! 💕
+        `);
+      } catch (error) {
+        console.error('Failed to notify inviter:', error);
+      }
+    }
     
     return res.status(200).json({
       success: true,
@@ -413,6 +497,7 @@ ${APP_URL}
       }
     });
   } catch (error) {
+    console.error('Accept invite error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -435,14 +520,18 @@ export const sendMessage = async (req, res) => {
     const partner = couple.user1._id.toString() === req.userId ? couple.user2 : couple.user1;
     
     if (partner && !partner.onlineStatus?.isOnline) {
-      await botInvite.notifyUser(partner.telegramId, `
+      try {
+        await botInvite.notifyUser(partner.telegramId, `
 💬 <b>New message from your partner!</b>
 
 You have a new message on LoveVerse.
 
 Open the app to read it:
 ${APP_URL}
-      `);
+        `);
+      } catch (error) {
+        console.error('Failed to notify partner:', error);
+      }
     }
     
     res.status(201).json({ success: true, message });
@@ -498,10 +587,22 @@ export const startGame = async (req, res) => {
     
     // Notify partner that a game has started
     const couple = await Couple.findById(coupleId).populate('user1 user2');
+    const user = await User.findById(req.userId);
     const partner = couple.user1._id.toString() === req.userId ? couple.user2 : couple.user1;
     
     if (partner) {
-      await botInvite.sendGameInvite(coupleId, gameType, couple.user1.firstName);
+      try {
+        await botInvite.notifyUser(partner.telegramId, `
+🎮 <b>Game Invitation!</b>
+
+${user.firstName} has invited you to play <b>${gameType.replace('_', ' ')}</b>!
+
+Open the app to join the game:
+${APP_URL}/games
+        `);
+      } catch (error) {
+        console.error('Failed to notify partner:', error);
+      }
     }
     
     res.status(201).json({ success: true, game });
@@ -516,6 +617,13 @@ export const makeGameMove = async (req, res) => {
     const { move } = req.body;
     
     const game = await Game.findById(gameId);
+    if (!game) {
+      return res.status(404).json({
+        success: false,
+        error: 'Game not found'
+      });
+    }
+    
     game.rounds.push({ move, player: req.userId });
     await game.save();
     
@@ -535,6 +643,17 @@ export const completeGame = async (req, res) => {
     // Award XP
     const couple = await Couple.findById(game.coupleId);
     await CoupleService.addRelationshipXP(couple._id, 50);
+    
+    // Award XP to winner
+    if (winnerId) {
+      const winner = await User.findById(winnerId);
+      if (winner) {
+        const xpResult = addXP(winner.xp, 50);
+        winner.xp = xpResult.xp;
+        winner.level = xpResult.level;
+        await winner.save();
+      }
+    }
     
     res.json({ success: true, game });
   } catch (error) {
@@ -557,6 +676,13 @@ export const getGameDetails = async (req, res) => {
   try {
     const { gameId } = req.params;
     const game = await Game.findById(gameId);
+    
+    if (!game) {
+      return res.status(404).json({
+        success: false,
+        error: 'Game not found'
+      });
+    }
     
     res.json({ success: true, game });
   } catch (error) {
@@ -596,6 +722,13 @@ export const updateTask = async (req, res) => {
     
     const task = await Task.findByIdAndUpdate(taskId, updates, { new: true });
     
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        error: 'Task not found'
+      });
+    }
+    
     res.json({ success: true, task });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -606,6 +739,10 @@ export const completeTask = async (req, res) => {
   try {
     const { taskId } = req.params;
     const task = await TaskService.completeTask(taskId, req.userId);
+    
+    // Award XP for completing task
+    const couple = await Couple.findById(task.coupleId);
+    await CoupleService.addRelationshipXP(couple._id, 20);
     
     res.json({ success: true, task });
   } catch (error) {
@@ -639,17 +776,22 @@ export const uploadMemory = async (req, res) => {
     
     // Notify partner about new memory
     const couple = await Couple.findById(coupleId).populate('user1 user2');
+    const user = await User.findById(req.userId);
     const partner = couple.user1._id.toString() === req.userId ? couple.user2 : couple.user1;
     
     if (partner) {
-      await botInvite.notifyUser(partner.telegramId, `
+      try {
+        await botInvite.notifyUser(partner.telegramId, `
 📸 <b>New Memory Shared!</b>
 
-Your partner has shared a new memory on LoveVerse.
+${user.firstName} has shared a new memory on LoveVerse.
 
 Open the app to see it:
-${APP_URL}
-      `);
+${APP_URL}/memories
+        `);
+      } catch (error) {
+        console.error('Failed to notify partner:', error);
+      }
     }
     
     res.status(201).json({ success: true, memory });
