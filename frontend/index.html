@@ -93,85 +93,79 @@
                             <button class="btn-icon" id="settingsBtn">⚙️</button>
                         </div>
 
-                        <!-- Create Couple Section -->
-                        <div id="createCoupleSection" class="create-couple-section">
-                            <div class="create-couple-card">
-                                <div class="icon">💑</div>
-                                <h3>Find Your Soulmate</h3>
-                                <p>Create a couple account and start your journey together</p>
-                                <button id="createCoupleBtn" class="btn btn-primary btn-large">
-                                    💕 Create Couple
-                                </button>
+                        <!-- Couple Status -->
+                        <div class="couple-card">
+                            <div class="couple-info">
+                                <div class="avatars">
+                                    <img id="user1Avatar" class="avatar" src="" alt="User 1">
+                                    <div class="heart-icon">💕</div>
+                                    <img id="user2Avatar" class="avatar" src="" alt="User 2">
+                                </div>
+                                <div class="couple-details">
+                                    <h2 id="coupleNickname">You & Your Love</h2>
+                                    <p id="relationshipStatus">Not paired yet</p>
+                                </div>
+                            </div>
+                            <div class="online-status">
+                                <span id="onlineIndicator" class="status-dot"></span>
+                                <span id="onlineText">Online</span>
                             </div>
                         </div>
 
-                        <!-- Couple Status -->
-                        <div id="coupleStatusSection" class="couple-status-section hidden">
-                            <div class="couple-card">
-                                <div class="couple-info">
-                                    <div class="avatars">
-                                        <img id="user1Avatar" class="avatar" src="" alt="User 1">
-                                        <div class="heart-icon">💕</div>
-                                        <img id="user2Avatar" class="avatar" src="" alt="User 2">
-                                    </div>
-                                    <div class="couple-details">
-                                        <h2 id="coupleNickname">You & Your Love</h2>
-                                        <p id="relationshipStatus">Not paired yet</p>
-                                    </div>
-                                </div>
-                                <div class="online-status">
-                                    <span id="onlineIndicator" class="status-dot"></span>
-                                    <span id="onlineText">Online</span>
-                                </div>
-                            </div>
+                        <!-- Connect Couple Button -->
+                        <div id="connectCoupleSection" class="connect-couple-section">
+                            <button id="connectCoupleBtn" class="btn btn-primary btn-large">
+                                🔗 Connect with Partner
+                            </button>
+                            <p class="connect-hint">Enter your partner's pairing code to connect</p>
+                        </div>
 
-                            <!-- Quick Actions for Couples -->
-                            <div class="quick-actions">
-                                <button class="action-btn" id="moodCheckInBtn">
-                                    <span class="icon">😊</span>
-                                    <span>Mood Check-in</span>
-                                </button>
-                                <button class="action-btn" id="playGameBtn">
-                                    <span class="icon">🎮</span>
-                                    <span>Play Game</span>
-                                </button>
-                                <button class="action-btn" id="sendMessageBtn">
-                                    <span class="icon">💬</span>
-                                    <span>Send Message</span>
-                                </button>
-                                <button class="action-btn" id="viewRewardsBtn">
-                                    <span class="icon">🎁</span>
-                                    <span>Rewards</span>
-                                </button>
+                        <!-- Stats Section -->
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value" id="relationshipLevel">1</div>
+                                <div class="stat-label">Level</div>
                             </div>
-
-                            <!-- Stats Section -->
-                            <div class="stats-grid">
-                                <div class="stat-card">
-                                    <div class="stat-value" id="relationshipLevel">1</div>
-                                    <div class="stat-label">Level</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value" id="dailyStreak">0</div>
-                                    <div class="stat-label">Streak</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value" id="userCoins">0</div>
-                                    <div class="stat-label">Coins</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value" id="xpProgress">0%</div>
-                                    <div class="stat-label">XP</div>
-                                </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="dailyStreak">0</div>
+                                <div class="stat-label">Streak</div>
                             </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="userCoins">0</div>
+                                <div class="stat-label">Coins</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="xpProgress">0%</div>
+                                <div class="stat-label">XP</div>
+                            </div>
+                        </div>
 
-                            <!-- Daily Challenge -->
-                            <div class="challenge-card">
-                                <h3>Today's Challenge 🎯</h3>
-                                <p id="dailyChallengeText">Complete a game together!</p>
-                                <div class="progress-bar">
-                                    <div id="challengeProgress" class="progress-fill"></div>
-                                </div>
+                        <!-- Quick Actions -->
+                        <div class="quick-actions">
+                            <button class="action-btn" id="moodCheckInBtn">
+                                <span class="icon">😊</span>
+                                <span>Mood Check-in</span>
+                            </button>
+                            <button class="action-btn" id="playGameBtn">
+                                <span class="icon">🎮</span>
+                                <span>Play Game</span>
+                            </button>
+                            <button class="action-btn" id="sendMessageBtn">
+                                <span class="icon">💬</span>
+                                <span>Send Message</span>
+                            </button>
+                            <button class="action-btn" id="viewRewardsBtn">
+                                <span class="icon">🎁</span>
+                                <span>Rewards</span>
+                            </button>
+                        </div>
+
+                        <!-- Daily Challenge -->
+                        <div class="challenge-card">
+                            <h3>Today's Challenge 🎯</h3>
+                            <p id="dailyChallengeText">Complete a game together!</p>
+                            <div class="progress-bar">
+                                <div id="challengeProgress" class="progress-fill"></div>
                             </div>
                         </div>
                     </div>
@@ -312,46 +306,31 @@
             </div>
         </main>
 
-        <!-- Create Couple Modal -->
-        <div id="createCoupleModal" class="modal hidden">
+        <!-- Connect Couple Modal -->
+        <div id="connectCoupleModal" class="modal hidden">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>💕 Create Your Couple</h2>
+                    <h2>🔗 Connect with Partner</h2>
                     <button class="modal-close" id="closeModalBtn">×</button>
                 </div>
                 <div class="modal-body">
-                    <form id="createCoupleForm">
+                    <p>Enter the pairing code shared by your partner</p>
+                    <form id="connectCoupleForm">
                         <div class="form-group">
-                            <label for="coupleNameInput">Couple Name</label>
+                            <label for="pairingCodeInput">Pairing Code</label>
                             <input 
                                 type="text" 
-                                id="coupleNameInput" 
-                                placeholder="e.g., Our Love Story"
+                                id="pairingCodeInput" 
+                                placeholder="e.g., A1B2C3"
                                 class="form-input"
+                                maxlength="6"
                                 required
                             >
                         </div>
-                        <div class="form-group">
-                            <label for="nicknameInput">Your Nickname</label>
-                            <input 
-                                type="text" 
-                                id="nicknameInput" 
-                                placeholder="e.g., Sweetie"
-                                class="form-input"
-                            >
-                        </div>
-                        <div class="form-group">
-                            <label for="anniversaryInput">Anniversary Date</label>
-                            <input 
-                                type="date" 
-                                id="anniversaryInput" 
-                                class="form-input"
-                            >
-                        </div>
                         <div class="form-actions">
-                            <button type="button" class="btn btn-secondary" id="cancelCreateBtn">Cancel</button>
+                            <button type="button" class="btn btn-secondary" id="cancelConnectBtn">Cancel</button>
                             <button type="submit" class="btn btn-primary">
-                                💕 Create Couple
+                                🔗 Connect
                             </button>
                         </div>
                     </form>
@@ -362,7 +341,7 @@
         <!-- Loading Overlay -->
         <div id="loadingOverlay" class="loading-overlay hidden">
             <div class="loading-spinner"></div>
-            <p id="loadingText">Loading...</p>
+            <p id="loadingText">Connecting...</p>
         </div>
     </div>
 
@@ -375,4 +354,4 @@
     
     <script type="module" src="js/app.js"></script>
 </body>
-    </html>
+                                                                              </html>
