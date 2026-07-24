@@ -53,8 +53,8 @@ app.use((req, res) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📡 API available at http://localhost:${PORT}/api`);
-  console.log(`🔍 Health check at http://localhost:${PORT}/health`);
+  console.log(`📡 API available at https://lovers-game.onrender.com:${PORT}/api`);
+  console.log(`🔍 Health check at https://lovers-game.onrender.com:${PORT}/health`);
 });
 
 export default app;
