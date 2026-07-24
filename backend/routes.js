@@ -6,8 +6,7 @@ const router = express.Router();
 
 // ============ AUTH ROUTES ============
 router.post('/auth/login', controllers.loginWithTelegram);
-// Remove the refresh-token route since it's not implemented yet
-// router.post('/auth/refresh-token', controllers.refreshToken);
+// router.post('/auth/refresh-token', controllers.refreshToken); // Uncomment when implemented
 
 // ============ USER ROUTES ============
 router.get('/user/profile', authenticateToken, controllers.getUserProfile);
