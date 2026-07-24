@@ -64,33 +64,4 @@ router.get('/couple/:coupleId/progress', authenticateToken, validateCoupleMember
 router.get('/couple/:coupleId/achievements', authenticateToken, validateCoupleMembership, controllers.getCoupleAchievements);
 router.get('/user/levels', authenticateToken, controllers.getUserLevels);
 
-export default router;router.get('/couple/:coupleId/games/:gameId', authenticateToken, validateCoupleMembership, controllers.getGameDetails);
-
-// ============ PLANNER/TASK ROUTES ============
-router.post('/couple/:coupleId/tasks', authenticateToken, validateCoupleMembership, controllers.createTask);
-router.get('/couple/:coupleId/tasks', authenticateToken, validateCoupleMembership, controllers.getCoupleTasks);
-router.put('/couple/:coupleId/tasks/:taskId', authenticateToken, validateCoupleMembership, controllers.updateTask);
-router.patch('/couple/:coupleId/tasks/:taskId/complete', authenticateToken, validateCoupleMembership, controllers.completeTask);
-router.delete('/couple/:coupleId/tasks/:taskId', authenticateToken, validateCoupleMembership, controllers.deleteTask);
-
-// ============ MEMORY/ALBUM ROUTES ============
-router.post('/couple/:coupleId/memories', authenticateToken, validateCoupleMembership, controllers.uploadMemory);
-router.get('/couple/:coupleId/memories', authenticateToken, validateCoupleMembership, controllers.getMemories);
-router.patch('/memories/:memoryId/favorite', authenticateToken, controllers.toggleFavorite);
-router.delete('/memories/:memoryId', authenticateToken, controllers.deleteMemory);
-router.post('/couple/:coupleId/albums', authenticateToken, validateCoupleMembership, controllers.createAlbum);
-router.get('/couple/:coupleId/albums', authenticateToken, validateCoupleMembership, controllers.getAlbums);
-
-// ============ REWARD ROUTES ============
-router.get('/user/rewards', authenticateToken, controllers.getRewards);
-router.post('/user/rewards/spin', authenticateToken, controllers.spinLuckySpin);
-router.post('/user/rewards/claim/:rewardId', authenticateToken, controllers.claimReward);
-router.get('/user/coins', authenticateToken, controllers.getUserCoins);
-router.post('/user/coins/purchase', authenticateToken, controllers.purchaseCoins);
-
-// ============ PROGRESS ROUTES ============
-router.get('/couple/:coupleId/progress', authenticateToken, validateCoupleMembership, controllers.getCoupleProgress);
-router.get('/couple/:coupleId/achievements', authenticateToken, validateCoupleMembership, controllers.getCoupleAchievements);
-router.get('/user/levels', authenticateToken, controllers.getUserLevels);
-
 export default router;
