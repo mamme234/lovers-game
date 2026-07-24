@@ -6,10 +6,28 @@ import { generateToken, generatePairingCode, calculateMatchPercentage, updateDai
 export const loginWithTelegram = async (req, res) => {
   try {
     const { initData, userInfo } = req.body;
-    
+
+    // Validate request
+    if (!userInfo || !userInfo.id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Telegram user data not found.',
+      });
+    }
+
+    // Production:
+    // Verify initData with your BOT_TOKEN here.
+    // For now we only check that it exists.
+    if (typeof initData !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid Telegram initData.',
+      });
+    }
+
     const { user, token } = await UserService.createOrUpdateUser(userInfo);
-    
-    res.json({
+
+    return res.status(200).json({
       success: true,
       token,
       user: {
@@ -17,24 +35,24 @@ export const loginWithTelegram = async (req, res) => {
         telegramId: user.telegramId,
         firstName: user.firstName,
         lastName: user.lastName,
+        username: user.username,
         photoUrl: user.photoUrl,
-        level: user.level,
-        xp: user.xp,
+        isPremium: user.isPremium,
+        coupleId: user.coupleId || null,
+        level: user.level || 1,
+        xp: user.xp || 0,
+        coins: user.coins || 0,
       },
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Telegram Login Error:', error);
+
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Authentication failed.',
+    });
   }
 };
-
-export const refreshToken = async (req, res) => {
-  try {
-    const { userId } = req.body;
-    const user = await User.findById(userId);
-    
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
     
     const token = generateToken(user._id);
     res.json({ success: true, token });
