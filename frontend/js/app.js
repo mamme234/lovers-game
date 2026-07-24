@@ -8,7 +8,7 @@ import { loadMemories } from './pages/memories.js';
 import { loadProfile } from './pages/profile.js';
 import { AnimationManager } from './animations.js';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://lovers-game.onrender.com/api';
 
 class LoveVerseApp {
   constructor() {
