@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="LoveVerse - Premium Couples Mini App for Telegram">
+    <meta name="theme-color" content="#ff6b9d">
+    <title>LoveVerse - Premium Couples Mini App 💕</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Loading Screen -->
+        <div id="loading" class="loading-screen">
+            <div class="loading-animation">
+                <div class="heart-pulse"></div>
+                <p>Loading LoveVerse...</p>
+            </div>
+        </div>
+
+        <!-- Login Screen -->
+        <section id="login-screen" class="screen hidden">
+            <div class="login-container">
+                <div class="login-content">
+                    <div class="logo">
+                        <h1>💕 LoveVerse</h1>
+                        <p>Premium Couples Mini App</p>
+                    </div>
+                    
+                    <div class="features-list">
+                        <div class="feature">
+                            <span class="icon">🎮</span>
+                            <span>Fun Games</span>
+                        </div>
+                        <div class="feature">
+                            <span class="icon">💬</span>
+                            <span>Private Chat</span>
+                        </div>
+                        <div class="feature">
+                            <span class="icon">📸</span>
+                            <span>Memories</span>
+                        </div>
+                        <div class="feature">
+                            <span class="icon">📅</span>
+                            <span>Planner</span>
+                        </div>
+                    </div>
+
+                    <button id="telegramLoginBtn" class="btn btn-primary btn-large">
+                        Login with Telegram
+                    </button>
+
+                    <p class="terms">By logging in, you agree to our Terms of Service</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main App -->
+        <main id="main-app" class="hidden">
+            <!-- Navigation -->
+            <nav class="bottom-nav">
+                <a href="#dashboard" class="nav-item active" data-page="dashboard">
+                    <span class="icon">🏠</span>
+                    <span class="label">Home</span>
+                </a>
+                <a href="#chat" class="nav-item" data-page="chat">
+                    <span class="icon">💬</span>
+                    <span class="label">Chat</span>
+                </a>
+                <a href="#games" class="nav-item" data-page="games">
+                    <span class="icon">🎮</span>
+                    <span class="label">Games</span>
+                </a>
+                <a href="#memories" class="nav-item" data-page="memories">
+                    <span class="icon">📸</span>
+                    <span class="label">Memories</span>
+                </a>
+                <a href="#profile" class="nav-item" data-page="profile">
+                    <span class="icon">👤</span>
+                    <span class="label">Profile</span>
+                </a>
+            </nav>
+
+            <!-- Pages Container -->
+            <div class="pages-container">
+                <!-- Dashboard Page -->
+                <section id="dashboard" class="page active">
+                    <div class="dashboard-content">
+                        <div class="header">
+                            <h1>Welcome! 💕</h1>
+                            <button class="btn-icon" id="settingsBtn">⚙️</button>
+                        </div>
+
+                        <!-- Couple Status -->
+                        <div class="couple-card">
+                            <div class="couple-info">
+                                <div class="avatars">
+                                    <img id="user1Avatar" class="avatar" src="" alt="User 1">
+                                    <div class="heart-icon">💕</div>
+                                    <img id="user2Avatar" class="avatar" src="" alt="User 2">
+                                </div>
+                                <div class="couple-details">
+                                    <h2 id="coupleNickname">You & Your Love</h2>
+                                    <p id="relationshipStatus">Not paired yet</p>
+                                </div>
+                            </div>
+                            <div class="online-status">
+                                <span id="onlineIndicator" class="status-dot"></span>
+                                <span id="onlineText">Online</span>
+                            </div>
+                        </div>
+
+                        <!-- Stats Section -->
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value" id="relationshipLevel">1</div>
+                                <div class="stat-label">Level</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="dailyStreak">0</div>
+                                <div class="stat-label">Streak</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="userCoins">0</div>
+                                <div class="stat-label">Coins</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="xpProgress">0%</div>
+                                <div class="stat-label">XP</div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="quick-actions">
+                            <button class="action-btn" id="moodCheckInBtn">
+                                <span class="icon">😊</span>
+                                <span>Mood Check-in</span>
+                            </button>
+                            <button class="action-btn" id="playGameBtn">
+                                <span class="icon">🎮</span>
+                                <span>Play Game</span>
+                            </button>
+                            <button class="action-btn" id="sendMessageBtn">
+                                <span class="icon">💬</span>
+                                <span>Send Message</span>
+                            </button>
+                            <button class="action-btn" id="viewRewardsBtn">
+                                <span class="icon">🎁</span>
+                                <span>Rewards</span>
+                            </button>
+                        </div>
+
+                        <!-- Daily Challenge -->
+                        <div class="challenge-card">
+                            <h3>Today's Challenge 🎯</h3>
+                            <p id="dailyChallengeText">Complete a game together!</p>
+                            <div class="progress-bar">
+                                <div id="challengeProgress" class="progress-fill"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Chat Page -->
+                <section id="chat" class="page">
+                    <div class="chat-container">
+                        <div class="chat-header">
+                            <h2>Private Chat 💬</h2>
+                            <span id="partnerOnlineStatus" class="online-badge"></span>
+                        </div>
+
+                        <div id="messagesContainer" class="messages-list">
+                            <!-- Messages will be loaded here -->
+                        </div>
+
+                        <div class="chat-input-area">
+                            <input 
+                                type="text" 
+                                id="messageInput" 
+                                placeholder="Say something sweet..."
+                                class="message-input"
+                            >
+                            <button id="sendMessageIconBtn" class="btn-icon send-btn">➤</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Games Page -->
+                <section id="games" class="page">
+                    <div class="games-container">
+                        <h2>Fun Games 🎮</h2>
+                        
+                        <div class="games-grid">
+                            <div class="game-card" data-game="compatibility_quiz">
+                                <div class="game-icon">📋</div>
+                                <h3>Compatibility Quiz</h3>
+                                <p>Test your compatibility</p>
+                            </div>
+                            <div class="game-card" data-game="truth_or_dare">
+                                <div class="game-icon">🎭</div>
+                                <h3>Truth or Dare</h3>
+                                <p>Deep or fun questions</p>
+                            </div>
+                            <div class="game-card" data-game="would_you_rather">
+                                <div class="game-icon">🤔</div>
+                                <h3>Would You Rather</h3>
+                                <p>Choose your answer</p>
+                            </div>
+                            <div class="game-card" data-game="guess_my_answer">
+                                <div class="game-icon">🎯</div>
+                                <h3>Guess My Answer</h3>
+                                <p>Guess what they choose</p>
+                            </div>
+                            <div class="game-card" data-game="emoji_challenge">
+                                <div class="game-icon">😊</div>
+                                <h3>Emoji Challenge</h3>
+                                <p>Express without words</p>
+                            </div>
+                            <div class="game-card" data-game="memory_match">
+                                <div class="game-icon">🧠</div>
+                                <h3>Memory Match</h3>
+                                <p>Match the pairs</p>
+                            </div>
+                        </div>
+
+                        <!-- Game History -->
+                        <div class="game-history">
+                            <h3>Recent Games</h3>
+                            <div id="gameHistoryList" class="history-list">
+                                <!-- Game history will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Memories Page -->
+                <section id="memories" class="page">
+                    <div class="memories-container">
+                        <h2>Shared Memories 📸</h2>
+                        
+                        <div class="memory-controls">
+                            <button id="uploadMemoryBtn" class="btn btn-secondary">+ Upload Photo</button>
+                        </div>
+
+                        <div id="memoriesGrid" class="memories-grid">
+                            <!-- Memories will be loaded here -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Profile Page -->
+                <section id="profile" class="page">
+                    <div class="profile-container">
+                        <div class="profile-header">
+                            <img id="profileAvatar" class="profile-avatar" src="" alt="Profile">
+                            <h2 id="profileName">User</h2>
+                            <p id="profileLevel">Level 1</p>
+                        </div>
+
+                        <div class="profile-sections">
+                            <!-- Achievements -->
+                            <div class="profile-section">
+                                <h3>Achievements 🏆</h3>
+                                <div id="achievementsList" class="achievements-list">
+                                    <!-- Achievements will be loaded here -->
+                                </div>
+                            </div>
+
+                            <!-- Settings -->
+                            <div class="profile-section">
+                                <h3>Settings ⚙️</h3>
+                                <div class="settings-list">
+                                    <label class="toggle-setting">
+                                        <input type="checkbox" id="darkModeToggle" checked>
+                                        <span>Dark Mode</span>
+                                    </label>
+                                    <label class="toggle-setting">
+                                        <input type="checkbox" id="notificationsToggle" checked>
+                                        <span>Notifications</span>
+                                    </label>
+                                    <label class="toggle-setting">
+                                        <input type="checkbox" id="soundToggle" checked>
+                                        <span>Sound</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Danger Zone -->
+                            <div class="profile-section danger">
+                                <h3>More Options</h3>
+                                <button class="btn btn-danger" id="logoutBtn">Logout</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lottie-web@5.12.2/build/player/lottie.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
