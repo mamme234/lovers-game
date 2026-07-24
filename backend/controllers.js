@@ -124,10 +124,36 @@ export const getUserStatistics = async (req, res) => {
 // ============ COUPLE CONTROLLERS ============
 export const createCouple = async (req, res) => {
   try {
-    const couple = await CoupleService.createCouple(req.userId);
-    res.json({ success: true, couple });
+    const { coupleName, nickname, anniversaryDate } = req.body;
+    
+    const couple = await CoupleService.createCouple(
+      req.userId,
+      coupleName,
+      nickname,
+      anniversaryDate
+    );
+    
+    // Award welcome bonus
+    const user = await User.findById(req.userId);
+    user.coins = (user.coins || 0) + 100;
+    user.xp = (user.xp || 0) + 50;
+    await user.save();
+    
+    res.json({ 
+      success: true, 
+      couple,
+      bonus: {
+        coins: 100,
+        xp: 50,
+      },
+      message: 'Couple created successfully! 🎉'
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Create couple error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 };
 
