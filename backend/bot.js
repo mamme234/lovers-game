@@ -523,12 +523,8 @@ Click the button below to open the app:
 // EXPORT FUNCTIONS
 // ============================================
 
-/**
- * Generate an invite link for a couple
- */
-export function generateInviteLink(coupleId) {
-  return `https://t.me/${BOT_USERNAME}?start=ref_${coupleId}`;
-}
+// generateInviteLink is already exported above at line 45
+// REMOVED duplicate export at line 529
 
 /**
  * Send invite to a user - always use deep link if they haven't started the bot
