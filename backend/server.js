@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import router from './routes.js';
 import mongoose from 'mongoose';
+import './bot.js'; // Import bot to start it
 
 dotenv.config();
 
@@ -53,8 +54,8 @@ app.use((req, res) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📡 API available at https://lovers-game.onrender.com:${PORT}/api`);
-  console.log(`🔍 Health check at https://lovers-game.onrender.com:${PORT}/health`);
+  console.log(`📡 API available at http://localhost:${PORT}/api`);
+  console.log(`🔍 Health check at http://localhost:${PORT}/health`);
 });
 
 export default app;
