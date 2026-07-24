@@ -53,13 +53,6 @@ export const loginWithTelegram = async (req, res) => {
     });
   }
 };
-    
-    const token = generateToken(user._id);
-    res.json({ success: true, token });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
 
 // ============ USER CONTROLLERS ============
 export const getUserProfile = async (req, res) => {
@@ -567,9 +560,9 @@ export const getUserLevels = async (req, res) => {
   }
 };
 
+// ============ DEFAULT EXPORT ============
 export default {
   loginWithTelegram,
-  refreshToken,
   getUserProfile,
   updateUserProfile,
   updateMood,
