@@ -26,7 +26,7 @@ export const config = {
   },
   
   // URLs
-  frontendUrl: process.env.FRONTEND_URL || 'https://lovers-game.vercel.app/',
+  frontendUrl: process.env.FRONTEND_URL || 'https://lovers-game.vercel.app',
   socketCorsOrigin: process.env.SOCKET_CORS_ORIGIN || 'http://localhost:3000',
   
   // Rate Limiting
