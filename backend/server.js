@@ -27,13 +27,14 @@ app.use(cors({
     'https://lovers-game.vercel.app',
     'https://lovers-game.onrender.com',
     'http://localhost:3000',
-    'http://localhost:5173'
+    'http://localhost:5173',
+    'http://localhost:5000'
   ],
   credentials: true,
 }));
 
 // Raw body parser for Telegram webhook (must come before express.json)
-if (IS_PRODUCTION) {
+if (IS_PRODUCTION && process.env.TELEGRAM_BOT_TOKEN) {
   app.use(`/webhook/${process.env.TELEGRAM_BOT_TOKEN}`, express.raw({ 
     type: 'application/json' 
   }));
