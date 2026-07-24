@@ -1,91 +1,60 @@
 import express from 'express';
-import http from 'http';
-import helmet from 'helmet';
 import cors from 'cors';
-import rateLimit from 'express-rate-limit';
-import { connectDB } from './db.js';
-import { initializeSocket } from './socket.js';
-import config from './config.js';
-import routes from './routes.js';
-import {
-  requestLogger,
-  corsHeaders,
-  errorHandler,
-} from './middleware.js';
+import helmet from 'helmet';
+import dotenv from 'dotenv';
+import router from './routes.js';
+import mongoose from 'mongoose';
+
+dotenv.config();
 
 const app = express();
-const server = http.createServer(app);
+const PORT = process.env.PORT || 5000;
 
-// ============ DATABASE CONNECTION ============
-connectDB();
-
-// ============ MIDDLEWARE ============
-// Security
+// Middleware
 app.use(helmet());
-
-// CORS
-app.use(cors({
-  origin: config.frontendUrl,
-  credentials: true,
-}));
-app.use(corsHeaders);
-
-// Body Parser
+app.use(cors());
 app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Request Logger
-app.use(requestLogger);
+// Database connection
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/loveverse')
+  .then(() => console.log('✅ MongoDB connected successfully'))
+  .catch((err) => console.error('❌ MongoDB connection error:', err));
 
-// Rate Limiting
-const limiter = rateLimit({
-  windowMs: config.rateLimit.windowMs,
-  max: config.rateLimit.maxRequests,
-  message: 'Too many requests from this IP, please try again later.',
-});
-app.use('/api/', limiter);
+// Routes
+app.use('/api', router);
 
-// ============ ROUTES ============
-app.use('/api/', routes);
-
-// Health Check
+// Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date() });
-});
-
-// ============ SOCKET.IO ============
-const io = initializeSocket(server, config);
-app.set('io', io);
-
-// ============ ERROR HANDLING ============
-app.use(errorHandler);
-
-// 404 Handler
-app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-});
-
-// ============ SERVER START ============
-const PORT = config.port;
-server.listen(PORT, () => {
-  console.log(`
-╔════════════════════════════════════════╗
-║         🎮 LoveVerse Server 💕         ║
-╠════════════════════════════════════════╣
-║  ✅ Server running on port ${PORT}           ║
-║  ✅ Environment: ${config.nodeEnv}              ║
-║  ✅ WebSocket enabled with Socket.io  ║
-╚════════════════════════════════════════╝
-  `);
-});
-
-// Graceful Shutdown
-process.on('SIGINT', () => {
-  console.log('\n⏹️  Shutting down gracefully...');
-  server.close(() => {
-    console.log('❌ Server closed');
-    process.exit(0);
+  res.json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
   });
 });
 
-export { app, server, io };
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err.stack);
+  res.status(500).json({ 
+    success: false,
+    error: err.message || 'Something went wrong!' 
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Route not found'
+  });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📡 API available at http://localhost:${PORT}/api`);
+  console.log(`🔍 Health check at http://localhost:${PORT}/health`);
+});
+
+export default app;
