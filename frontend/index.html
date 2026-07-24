@@ -112,12 +112,14 @@
                             </div>
                         </div>
 
-                        <!-- Connect Couple Button (Inline with Stats) -->
+                        <!-- Connect Couple Button -->
                         <div class="connect-couple-wrapper">
                             <button id="connectCoupleBtn" class="btn btn-primary connect-btn">
                                 🔗 Connect with Partner
                             </button>
-                            <span class="connect-hint">Enter pairing code to connect</span>
+                            <span class="connect-hint">
+                                Share: <strong id="inviteLinkDisplay">https://lovers-game.vercel.app/?ref=@username</strong>
+                            </span>
                         </div>
 
                         <!-- Stats Section -->
@@ -314,23 +316,39 @@
                     <button class="modal-close" id="closeModalBtn">×</button>
                 </div>
                 <div class="modal-body">
-                    <p>Enter the pairing code shared by your partner</p>
+                    <p>Share this link with your partner:</p>
+                    <div class="invite-link-container">
+                        <input 
+                            type="text" 
+                            id="inviteLinkInput" 
+                            class="form-input invite-link-input"
+                            value="https://lovers-game.vercel.app/?ref=USERNAME"
+                            readonly
+                        >
+                        <button id="copyLinkBtn" class="btn btn-secondary copy-btn">📋 Copy</button>
+                    </div>
+                    
+                    <div class="divider">OR</div>
+                    
+                    <p>Enter your partner's username:</p>
                     <form id="connectCoupleForm">
                         <div class="form-group">
-                            <label for="pairingCodeInput">Pairing Code</label>
-                            <input 
-                                type="text" 
-                                id="pairingCodeInput" 
-                                placeholder="e.g., A1B2C3"
-                                class="form-input"
-                                maxlength="6"
-                                required
-                            >
+                            <label for="usernameInput">Partner's Username</label>
+                            <div class="username-input-wrapper">
+                                <span class="username-prefix">@</span>
+                                <input 
+                                    type="text" 
+                                    id="usernameInput" 
+                                    placeholder="username"
+                                    class="form-input username-input"
+                                    required
+                                >
+                            </div>
                         </div>
                         <div class="form-actions">
                             <button type="button" class="btn btn-secondary" id="cancelConnectBtn">Cancel</button>
                             <button type="submit" class="btn btn-primary">
-                                🔗 Connect
+                                🔗 Send Invite
                             </button>
                         </div>
                     </form>
@@ -354,324 +372,4 @@
     
     <script type="module" src="js/app.js"></script>
 </body>
-    </html>                        <div class="feature">
-                            <span class="icon">💬</span>
-                            <span>Private Chat</span>
-                        </div>
-                        <div class="feature">
-                            <span class="icon">📸</span>
-                            <span>Memories</span>
-                        </div>
-                        <div class="feature">
-                            <span class="icon">📅</span>
-                            <span>Planner</span>
-                        </div>
-                    </div>
-
-                    <button id="telegramLoginBtn" class="btn btn-primary btn-large">
-                        Login with Telegram
-                    </button>
-
-                    <p class="terms">By logging in, you agree to our Terms of Service</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Main App -->
-        <main id="main-app" class="hidden">
-            <!-- Navigation -->
-            <nav class="bottom-nav">
-                <a href="#dashboard" class="nav-item active" data-page="dashboard">
-                    <span class="icon">🏠</span>
-                    <span class="label">Home</span>
-                </a>
-                <a href="#chat" class="nav-item" data-page="chat">
-                    <span class="icon">💬</span>
-                    <span class="label">Chat</span>
-                </a>
-                <a href="#games" class="nav-item" data-page="games">
-                    <span class="icon">🎮</span>
-                    <span class="label">Games</span>
-                </a>
-                <a href="#memories" class="nav-item" data-page="memories">
-                    <span class="icon">📸</span>
-                    <span class="label">Memories</span>
-                </a>
-                <a href="#profile" class="nav-item" data-page="profile">
-                    <span class="icon">👤</span>
-                    <span class="label">Profile</span>
-                </a>
-            </nav>
-
-            <!-- Pages Container -->
-            <div class="pages-container">
-                <!-- Dashboard Page -->
-                <section id="dashboard" class="page active">
-                    <div class="dashboard-content">
-                        <div class="header">
-                            <h1>Welcome! 💕</h1>
-                            <button class="btn-icon" id="settingsBtn">⚙️</button>
-                        </div>
-
-                        <!-- Couple Status -->
-                        <div class="couple-card">
-                            <div class="couple-info">
-                                <div class="avatars">
-                                    <img id="user1Avatar" class="avatar" src="" alt="User 1">
-                                    <div class="heart-icon">💕</div>
-                                    <img id="user2Avatar" class="avatar" src="" alt="User 2">
-                                </div>
-                                <div class="couple-details">
-                                    <h2 id="coupleNickname">You & Your Love</h2>
-                                    <p id="relationshipStatus">Not paired yet</p>
-                                </div>
-                            </div>
-                            <div class="online-status">
-                                <span id="onlineIndicator" class="status-dot"></span>
-                                <span id="onlineText">Online</span>
-                            </div>
-                        </div>
-
-                        <!-- Connect Couple Button -->
-                        <div id="connectCoupleSection" class="connect-couple-section">
-                            <button id="connectCoupleBtn" class="btn btn-primary btn-large">
-                                🔗 Connect with Partner
-                            </button>
-                            <p class="connect-hint">Enter your partner's pairing code to connect</p>
-                        </div>
-
-                        <!-- Stats Section -->
-                        <div class="stats-grid">
-                            <div class="stat-card">
-                                <div class="stat-value" id="relationshipLevel">1</div>
-                                <div class="stat-label">Level</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-value" id="dailyStreak">0</div>
-                                <div class="stat-label">Streak</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-value" id="userCoins">0</div>
-                                <div class="stat-label">Coins</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-value" id="xpProgress">0%</div>
-                                <div class="stat-label">XP</div>
-                            </div>
-                        </div>
-
-                        <!-- Quick Actions -->
-                        <div class="quick-actions">
-                            <button class="action-btn" id="moodCheckInBtn">
-                                <span class="icon">😊</span>
-                                <span>Mood Check-in</span>
-                            </button>
-                            <button class="action-btn" id="playGameBtn">
-                                <span class="icon">🎮</span>
-                                <span>Play Game</span>
-                            </button>
-                            <button class="action-btn" id="sendMessageBtn">
-                                <span class="icon">💬</span>
-                                <span>Send Message</span>
-                            </button>
-                            <button class="action-btn" id="viewRewardsBtn">
-                                <span class="icon">🎁</span>
-                                <span>Rewards</span>
-                            </button>
-                        </div>
-
-                        <!-- Daily Challenge -->
-                        <div class="challenge-card">
-                            <h3>Today's Challenge 🎯</h3>
-                            <p id="dailyChallengeText">Complete a game together!</p>
-                            <div class="progress-bar">
-                                <div id="challengeProgress" class="progress-fill"></div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Chat Page -->
-                <section id="chat" class="page">
-                    <div class="chat-container">
-                        <div class="chat-header">
-                            <h2>Private Chat 💬</h2>
-                            <span id="partnerOnlineStatus" class="online-badge"></span>
-                        </div>
-
-                        <div id="messagesContainer" class="messages-list">
-                            <!-- Messages will be loaded here -->
-                        </div>
-
-                        <div class="chat-input-area">
-                            <input 
-                                type="text" 
-                                id="messageInput" 
-                                placeholder="Say something sweet..."
-                                class="message-input"
-                            >
-                            <button id="sendMessageIconBtn" class="btn-icon send-btn">➤</button>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Games Page -->
-                <section id="games" class="page">
-                    <div class="games-container">
-                        <h2>Fun Games 🎮</h2>
-                        
-                        <div class="games-grid">
-                            <div class="game-card" data-game="compatibility_quiz">
-                                <div class="game-icon">📋</div>
-                                <h3>Compatibility Quiz</h3>
-                                <p>Test your compatibility</p>
-                            </div>
-                            <div class="game-card" data-game="truth_or_dare">
-                                <div class="game-icon">🎭</div>
-                                <h3>Truth or Dare</h3>
-                                <p>Deep or fun questions</p>
-                            </div>
-                            <div class="game-card" data-game="would_you_rather">
-                                <div class="game-icon">🤔</div>
-                                <h3>Would You Rather</h3>
-                                <p>Choose your answer</p>
-                            </div>
-                            <div class="game-card" data-game="guess_my_answer">
-                                <div class="game-icon">🎯</div>
-                                <h3>Guess My Answer</h3>
-                                <p>Guess what they choose</p>
-                            </div>
-                            <div class="game-card" data-game="emoji_challenge">
-                                <div class="game-icon">😊</div>
-                                <h3>Emoji Challenge</h3>
-                                <p>Express without words</p>
-                            </div>
-                            <div class="game-card" data-game="memory_match">
-                                <div class="game-icon">🧠</div>
-                                <h3>Memory Match</h3>
-                                <p>Match the pairs</p>
-                            </div>
-                        </div>
-
-                        <!-- Game History -->
-                        <div class="game-history">
-                            <h3>Recent Games</h3>
-                            <div id="gameHistoryList" class="history-list">
-                                <!-- Game history will be loaded here -->
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Memories Page -->
-                <section id="memories" class="page">
-                    <div class="memories-container">
-                        <h2>Shared Memories 📸</h2>
-                        
-                        <div class="memory-controls">
-                            <button id="uploadMemoryBtn" class="btn btn-secondary">+ Upload Photo</button>
-                        </div>
-
-                        <div id="memoriesGrid" class="memories-grid">
-                            <!-- Memories will be loaded here -->
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Profile Page -->
-                <section id="profile" class="page">
-                    <div class="profile-container">
-                        <div class="profile-header">
-                            <img id="profileAvatar" class="profile-avatar" src="" alt="Profile">
-                            <h2 id="profileName">User</h2>
-                            <p id="profileLevel">Level 1</p>
-                        </div>
-
-                        <div class="profile-sections">
-                            <!-- Achievements -->
-                            <div class="profile-section">
-                                <h3>Achievements 🏆</h3>
-                                <div id="achievementsList" class="achievements-list">
-                                    <!-- Achievements will be loaded here -->
-                                </div>
-                            </div>
-
-                            <!-- Settings -->
-                            <div class="profile-section">
-                                <h3>Settings ⚙️</h3>
-                                <div class="settings-list">
-                                    <label class="toggle-setting">
-                                        <input type="checkbox" id="darkModeToggle" checked>
-                                        <span>Dark Mode</span>
-                                    </label>
-                                    <label class="toggle-setting">
-                                        <input type="checkbox" id="notificationsToggle" checked>
-                                        <span>Notifications</span>
-                                    </label>
-                                    <label class="toggle-setting">
-                                        <input type="checkbox" id="soundToggle" checked>
-                                        <span>Sound</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <!-- Danger Zone -->
-                            <div class="profile-section danger">
-                                <h3>More Options</h3>
-                                <button class="btn btn-danger" id="logoutBtn">Logout</button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </main>
-
-        <!-- Connect Couple Modal -->
-        <div id="connectCoupleModal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>🔗 Connect with Partner</h2>
-                    <button class="modal-close" id="closeModalBtn">×</button>
-                </div>
-                <div class="modal-body">
-                    <p>Enter the pairing code shared by your partner</p>
-                    <form id="connectCoupleForm">
-                        <div class="form-group">
-                            <label for="pairingCodeInput">Pairing Code</label>
-                            <input 
-                                type="text" 
-                                id="pairingCodeInput" 
-                                placeholder="e.g., A1B2C3"
-                                class="form-input"
-                                maxlength="6"
-                                required
-                            >
-                        </div>
-                        <div class="form-actions">
-                            <button type="button" class="btn btn-secondary" id="cancelConnectBtn">Cancel</button>
-                            <button type="submit" class="btn btn-primary">
-                                🔗 Connect
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Loading Overlay -->
-        <div id="loadingOverlay" class="loading-overlay hidden">
-            <div class="loading-spinner"></div>
-            <p id="loadingText">Connecting...</p>
-        </div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lottie-web@5.12.2/build/player/lottie.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
-    <script type="module" src="js/app.js"></script>
-</body>
-                                                                              </html>
+    </html>
