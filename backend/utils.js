@@ -24,6 +24,18 @@ export const calculateLevel = (xp) => {
   return Math.floor(xp / levelThreshold) + 1;
 };
 
+// Add XP and return updated XP and Level
+export const addXP = (currentXP, amount) => {
+  const newXP = (currentXP || 0) + amount;
+  const newLevel = calculateLevel(newXP);
+  return { 
+    xp: newXP, 
+    level: newLevel,
+    xpGained: amount,
+    leveledUp: newLevel > calculateLevel(currentXP || 0)
+  };
+};
+
 // Calculate Match Percentage
 export const calculateMatchPercentage = (answers1, answers2) => {
   if (answers1.length === 0 || answers2.length === 0) return 0;
@@ -149,10 +161,12 @@ export const validateTelegramData = (initData, token) => {
   }
 };
 
+// Default export
 export default {
   generateToken,
   generatePairingCode,
   calculateLevel,
+  addXP,
   calculateMatchPercentage,
   formatDate,
   daysSince,
