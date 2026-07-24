@@ -9,6 +9,7 @@ import { loadProfile } from './pages/profile.js';
 import { AnimationManager } from './animations.js';
 
 const API_URL = 'https://lovers-game.onrender.com/api';
+const APP_URL = 'https://lovers-game.vercel.app';
 
 class LoveVerseApp {
   constructor() {
@@ -35,6 +36,7 @@ class LoveVerseApp {
       
       // Setup event listeners
       this.setupEventListeners();
+      this.setupConnectCoupleListeners();
       
       // Hide loading screen
       document.getElementById('loading').classList.add('hidden');
@@ -60,6 +62,9 @@ class LoveVerseApp {
         // Load couple data if paired
         if (this.user.coupleId) {
           await this.loadCoupleData();
+          this.hideConnectCouple();
+        } else {
+          this.showConnectCouple();
         }
       }
     } catch (error) {
@@ -93,6 +98,16 @@ class LoveVerseApp {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('main-app').classList.remove('hidden');
     this.navigateTo('dashboard');
+  }
+
+  showConnectCouple() {
+    const wrapper = document.querySelector('.connect-couple-wrapper');
+    if (wrapper) wrapper.classList.remove('hidden');
+  }
+
+  hideConnectCouple() {
+    const wrapper = document.querySelector('.connect-couple-wrapper');
+    if (wrapper) wrapper.classList.add('hidden');
   }
 
   setupEventListeners() {
@@ -135,6 +150,184 @@ class LoveVerseApp {
     }
   }
 
+  setupConnectCoupleListeners() {
+    // Connect Couple Button
+    const connectBtn = document.getElementById('connectCoupleBtn');
+    if (connectBtn) {
+      connectBtn.addEventListener('click', () => {
+        this.openConnectModal();
+      });
+    }
+
+    // Copy Link Button
+    const copyBtn = document.getElementById('copyLinkBtn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        this.copyInviteLink();
+      });
+    }
+
+    // Connect Form Submit
+    const connectForm = document.getElementById('connectCoupleForm');
+    if (connectForm) {
+      connectForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.sendInvite();
+      });
+    }
+
+    // Close Modal
+    const closeBtn = document.getElementById('closeModalBtn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        this.closeConnectModal();
+      });
+    }
+
+    const cancelBtn = document.getElementById('cancelConnectBtn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        this.closeConnectModal();
+      });
+    }
+
+    // Close modal on outside click
+    const modal = document.getElementById('connectCoupleModal');
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+          this.closeConnectModal();
+        }
+      });
+    }
+  }
+
+  openConnectModal() {
+    const modal = document.getElementById('connectCoupleModal');
+    if (!modal) return;
+    
+    modal.classList.remove('hidden');
+    
+    // Update invite link with current user's username
+    try {
+      const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      if (user?.username) {
+        const link = `${APP_URL}/?ref=@${user.username}`;
+        const input = document.getElementById('inviteLinkInput');
+        const display = document.getElementById('inviteLinkDisplay');
+        if (input) input.value = link;
+        if (display) display.textContent = link;
+      }
+    } catch (e) {
+      console.log('Telegram user not available');
+    }
+  }
+
+  closeConnectModal() {
+    const modal = document.getElementById('connectCoupleModal');
+    if (modal) modal.classList.add('hidden');
+    document.getElementById('usernameInput').value = '';
+  }
+
+  copyInviteLink() {
+    const input = document.getElementById('inviteLinkInput');
+    if (!input) return;
+    
+    input.select();
+    input.setSelectionRange(0, 99999);
+    
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(input.value).then(() => {
+        const btn = document.getElementById('copyLinkBtn');
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => btn.textContent = '📋 Copy', 2000);
+      }).catch(() => {
+        document.execCommand('copy');
+        const btn = document.getElementById('copyLinkBtn');
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => btn.textContent = '📋 Copy', 2000);
+      });
+    } else {
+      document.execCommand('copy');
+      const btn = document.getElementById('copyLinkBtn');
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => btn.textContent = '📋 Copy', 2000);
+    }
+  }
+
+  async sendInvite() {
+    const username = document.getElementById('usernameInput').value.trim();
+    
+    if (!username) {
+      alert('Please enter a username');
+      return;
+    }
+
+    // Show loading
+    const overlay = document.getElementById('loadingOverlay');
+    const loadingText = document.getElementById('loadingText');
+    if (overlay) {
+      overlay.classList.remove('hidden');
+      if (loadingText) loadingText.textContent = `Sending invite to @${username}...`;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/couple/invite`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          username: username,
+          inviteLink: `${APP_URL}/?ref=@${username}`
+        })
+      });
+
+      const data = await response.json();
+
+      if (overlay) overlay.classList.add('hidden');
+      this.closeConnectModal();
+
+      if (data.success) {
+        this.showToast(`✅ Invite sent to @${username}!`, 'success');
+        document.getElementById('usernameInput').value = '';
+      } else {
+        this.showToast(`❌ ${data.error || 'Failed to send invite'}`, 'error');
+      }
+    } catch (error) {
+      if (overlay) overlay.classList.add('hidden');
+      this.showToast('❌ Failed to send invite. Please try again.', 'error');
+      console.error('Invite error:', error);
+    }
+  }
+
+  showToast(message, type = 'info') {
+    const existingToast = document.querySelector('.toast-notification');
+    if (existingToast) existingToast.remove();
+
+    const toast = document.createElement('div');
+    toast.className = `toast-notification toast-${type}`;
+    toast.innerHTML = `
+      <div class="toast-content">
+        <span>${message}</span>
+        <button class="toast-close">×</button>
+      </div>
+    `;
+
+    document.body.appendChild(toast);
+
+    toast.querySelector('.toast-close').addEventListener('click', () => {
+      toast.remove();
+    });
+
+    setTimeout(() => {
+      toast.classList.add('toast-hide');
+      setTimeout(() => toast.remove(), 300);
+    }, 5000);
+  }
+
   navigateTo(page) {
     // Update active nav item
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -147,11 +340,13 @@ class LoveVerseApp {
     });
 
     // Show selected page
-    document.getElementById(page).classList.add('active');
-    this.currentPage = page;
-
-    // Load page content
-    this.loadPageContent(page);
+    const pageElement = document.getElementById(page);
+    if (pageElement) {
+      pageElement.classList.add('active');
+      this.currentPage = page;
+      // Load page content
+      this.loadPageContent(page);
+    }
   }
 
   async loadPageContent(page) {
