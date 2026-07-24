@@ -426,28 +426,36 @@ body.dark-mode {
   50% { opacity: 0.5; }
 }
 
-/* ============ CONNECT COUPLE SECTION ============ */
-.connect-couple-section {
+/* ============ CONNECT COUPLE WRAPPER ============ */
+.connect-couple-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 16px;
   margin: 16px 0 20px;
-  text-align: center;
-  padding: 20px;
+  padding: 12px 16px;
   background: var(--light);
   border-radius: var(--radius);
   border: 2px dashed var(--border);
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
-.connect-couple-section .btn {
-  width: 100%;
-  max-width: 300px;
+.connect-btn {
+  flex: 1;
+  min-width: 180px;
+  max-width: 280px;
+  white-space: nowrap;
 }
 
 .connect-hint {
-  margin-top: 8px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-light);
+  flex: 1;
+  min-width: 120px;
+  text-align: center;
 }
 
-.connect-couple-section.hidden {
+.connect-couple-wrapper.hidden {
   display: none;
 }
 
@@ -1130,8 +1138,20 @@ body.dark-mode {
     flex-direction: column;
   }
   
-  .connect-couple-section .btn {
+  .connect-couple-wrapper {
+    flex-direction: column;
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .connect-btn {
+    width: 100%;
     max-width: 100%;
+    white-space: normal;
+  }
+  
+  .connect-hint {
+    font-size: 12px;
   }
 }
 
@@ -1289,7 +1309,7 @@ body.dark-mode .form-actions .btn-secondary:hover {
   background: #4d4d4d;
 }
 
-body.dark-mode .connect-couple-section {
+body.dark-mode .connect-couple-wrapper {
   background: #2d2d2d;
   border-color: #3d3d3d;
 }
