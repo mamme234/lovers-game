@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['user'],
+      enum: ['user', 'user1', 'user2'],
       default: 'user',
     },
     level: {
@@ -78,6 +78,13 @@ const userSchema = new mongoose.Schema(
       },
     ],
     deviceTokens: [String],
+    onlineStatus: {
+      isOnline: {
+        type: Boolean,
+        default: false,
+      },
+      lastSeen: Date,
+    },
   },
   { timestamps: true }
 );
@@ -98,6 +105,10 @@ const coupleSchema = new mongoose.Schema(
       type: String,
       unique: true,
       sparse: true,
+    },
+    name: {
+      type: String,
+      default: 'Our Love Story',
     },
     nickname1: String,
     nickname2: String,
@@ -148,6 +159,16 @@ const coupleSchema = new mongoose.Schema(
     isPaired: {
       type: Boolean,
       default: false,
+    },
+    // Pending invite tracking
+    pendingInvite: {
+      username: String,
+      sentAt: Date,
+      status: {
+        type: String,
+        enum: ['pending', 'accepted', 'expired'],
+      },
+      pairingCode: String,
     },
   },
   { timestamps: true }
@@ -282,7 +303,7 @@ const gameSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['ongoing', 'completed', 'abandoned'],
+      enum: ['active', 'ongoing', 'completed', 'abandoned'],
       default: 'ongoing',
     },
     score1: {
@@ -299,6 +320,12 @@ const gameSchema = new mongoose.Schema(
     },
     matchPercentage: Number,
     rounds: [],
+    players: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      }
+    ],
     startedAt: {
       type: Date,
       default: Date.now,
@@ -364,11 +391,157 @@ const achievementSchema = new mongoose.Schema(
       default: 'bronze',
     },
     requirement: String,
+    xpReward: {
+      type: Number,
+      default: 0,
+    },
+    coinReward: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );
 
-// Create Models
+// ============ PENDING INVITE SCHEMA ============
+const pendingInviteSchema = new mongoose.Schema(
+  {
+    coupleId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Couple',
+      required: true,
+      index: true,
+    },
+    username: {
+      type: String,
+      required: true,
+      index: true,
+    },
+    telegramId: {
+      type: String,
+      required: true,
+      index: true,
+    },
+    pairingCode: {
+      type: String,
+      required: true,
+    },
+    inviterName: {
+      type: String,
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'accepted', 'expired', 'cancelled'],
+      default: 'pending',
+    },
+    sentAt: {
+      type: Date,
+      default: Date.now,
+    },
+    acceptedAt: Date,
+    expiresAt: {
+      type: Date,
+      default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+    },
+  },
+  { timestamps: true }
+);
+
+// ============ NOTIFICATION SCHEMA ============
+const notificationSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+    type: {
+      type: String,
+      enum: ['invite', 'message', 'game', 'memory', 'task', 'achievement', 'system'],
+      required: true,
+    },
+    title: String,
+    message: {
+      type: String,
+      required: true,
+    },
+    data: {
+      type: mongoose.Schema.Types.Mixed,
+    },
+    isRead: {
+      type: Boolean,
+      default: false,
+    },
+    readAt: Date,
+    actionUrl: String,
+  },
+  { timestamps: true }
+);
+
+// ============ INVITE CODE SCHEMA ============
+const inviteCodeSchema = new mongoose.Schema(
+  {
+    code: {
+      type: String,
+      unique: true,
+      required: true,
+    },
+    coupleId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Couple',
+      required: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    usedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    status: {
+      type: String,
+      enum: ['active', 'used', 'expired'],
+      default: 'active',
+    },
+    expiresAt: {
+      type: Date,
+      default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
+    usedAt: Date,
+  },
+  { timestamps: true }
+);
+
+// ============ INDEXES ============
+// User indexes
+userSchema.index({ coupleId: 1 });
+userSchema.index({ username: 1 });
+userSchema.index({ 'preferences.notifications': 1 });
+
+// Couple indexes
+coupleSchema.index({ pairingCode: 1 }, { unique: true, partialFilterExpression: { pairingCode: { $type: 'string' } } });
+coupleSchema.index({ user1: 1, user2: 1 });
+coupleSchema.index({ isPaired: 1 });
+
+// Message indexes
+messageSchema.index({ coupleId: 1, createdAt: -1 });
+messageSchema.index({ senderId: 1 });
+messageSchema.index({ isRead: 1 });
+
+// Pending invite indexes
+pendingInviteSchema.index({ coupleId: 1, username: 1 });
+pendingInviteSchema.index({ telegramId: 1 });
+pendingInviteSchema.index({ status: 1, expiresAt: 1 });
+
+// Notification indexes
+notificationSchema.index({ userId: 1, createdAt: -1 });
+notificationSchema.index({ userId: 1, isRead: 1 });
+
+// ============ CREATE MODELS ============
 export const User = mongoose.model('User', userSchema);
 export const Couple = mongoose.model('Couple', coupleSchema);
 export const Message = mongoose.model('Message', messageSchema);
@@ -377,7 +550,11 @@ export const Album = mongoose.model('Album', albumSchema);
 export const Game = mongoose.model('Game', gameSchema);
 export const Task = mongoose.model('Task', taskSchema);
 export const Achievement = mongoose.model('Achievement', achievementSchema);
+export const PendingInvite = mongoose.model('PendingInvite', pendingInviteSchema);
+export const Notification = mongoose.model('Notification', notificationSchema);
+export const InviteCode = mongoose.model('InviteCode', inviteCodeSchema);
 
+// ============ DEFAULT EXPORT ============
 export default {
   User,
   Couple,
@@ -387,4 +564,7 @@ export default {
   Game,
   Task,
   Achievement,
+  PendingInvite,
+  Notification,
+  InviteCode,
 };
