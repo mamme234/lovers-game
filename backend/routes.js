@@ -6,7 +6,6 @@ const router = express.Router();
 
 // ============ AUTH ROUTES ============
 router.post('/auth/login', controllers.loginWithTelegram);
-// router.post('/auth/refresh-token', controllers.refreshToken); // Uncomment when implemented
 
 // ============ USER ROUTES ============
 router.get('/user/profile', authenticateToken, controllers.getUserProfile);
@@ -17,11 +16,13 @@ router.get('/user/statistics', authenticateToken, controllers.getUserStatistics)
 
 // ============ COUPLE ROUTES ============
 router.post('/couple/create', authenticateToken, controllers.createCouple);
-router.post('/couple/invite', authenticateToken, controllers.invitePartner);
+router.post('/couple/:coupleId/invite', authenticateToken, controllers.invitePartner);
 router.post('/couple/join', authenticateToken, controllers.joinCouple);
 router.get('/couple/:coupleId/profile', authenticateToken, validateCoupleMembership, controllers.getCoupleProfile);
 router.put('/couple/:coupleId/profile', authenticateToken, validateCoupleMembership, controllers.updateCoupleProfile);
 router.get('/couple/:coupleId/status', authenticateToken, validateCoupleMembership, controllers.getCoupleStatus);
+router.get('/couple/:coupleId/invite-status', authenticateToken, controllers.getInviteStatus);
+router.post('/couple/:coupleId/accept-invite', authenticateToken, controllers.acceptInvite);
 
 // ============ MESSAGE ROUTES ============
 router.post('/couple/:coupleId/messages', authenticateToken, validateCoupleMembership, controllers.sendMessage);
@@ -63,4 +64,5 @@ router.get('/couple/:coupleId/progress', authenticateToken, validateCoupleMember
 router.get('/couple/:coupleId/achievements', authenticateToken, validateCoupleMembership, controllers.getCoupleAchievements);
 router.get('/user/levels', authenticateToken, controllers.getUserLevels);
 
+// ============ EXPORT ============
 export default router;
