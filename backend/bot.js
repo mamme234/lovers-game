@@ -1,20 +1,18 @@
 import TelegramBot from 'node-telegram-bot-api';
 import dotenv from 'dotenv';
-import { User, Couple, PendingInvite, InviteCode } from './models.js';
+import { User, Couple, PendingInvite } from './models.js';
 
 dotenv.config();
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const APP_URL = process.env.APP_URL || 'https://lovers-game.vercel.app';
-const API_URL = process.env.API_URL || 'https://lovers-game.onrender.com';
+const BOT_USERNAME = process.env.BOT_USERNAME || 'LoveVerseBot';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 let bot = null;
 
-// Initialize bot with appropriate mode
 if (BOT_TOKEN) {
   if (IS_PRODUCTION) {
-    // Production: Webhook mode
     bot = new TelegramBot(BOT_TOKEN, {
       webHook: {
         host: '0.0.0.0',
@@ -23,7 +21,6 @@ if (BOT_TOKEN) {
     });
     console.log('🤖 Telegram bot initialized in Webhook mode');
   } else {
-    // Development: Polling mode
     bot = new TelegramBot(BOT_TOKEN, { polling: true });
     console.log('🤖 Telegram bot initialized in Polling mode');
   }
@@ -35,31 +32,15 @@ if (BOT_TOKEN) {
 // SET WEBHOOK (production only)
 // ============================================
 if (IS_PRODUCTION && bot && BOT_TOKEN) {
-  const webhookUrl = `${API_URL}/webhook/${BOT_TOKEN}`;
+  const webhookUrl = `${process.env.API_URL || 'https://lovers-game.onrender.com'}/webhook/${BOT_TOKEN}`;
   
-  // Delete any existing webhook first
   bot.deleteWebHook()
-    .then(() => {
-      console.log('✅ Old webhook deleted');
-      return bot.setWebHook(webhookUrl, {
-        drop_pending_updates: true,
-        allowed_updates: ['message', 'callback_query', 'inline_query'],
-      });
-    })
+    .then(() => bot.setWebHook(webhookUrl, {
+      drop_pending_updates: true,
+      allowed_updates: ['message', 'callback_query'],
+    }))
     .then(() => {
       console.log(`✅ Webhook set to: ${webhookUrl}`);
-      console.log('🔗 Webhook URL:', webhookUrl);
-      
-      // Get webhook info to verify
-      return bot.getWebHookInfo();
-    })
-    .then((info) => {
-      console.log('📋 Webhook info:', {
-        url: info.url,
-        pending_update_count: info.pending_update_count,
-        last_error_date: info.last_error_date ? new Date(info.last_error_date * 1000) : null,
-        last_error_message: info.last_error_message,
-      });
     })
     .catch((error) => {
       console.error('❌ Failed to set webhook:', error);
@@ -72,11 +53,8 @@ if (IS_PRODUCTION && bot && BOT_TOKEN) {
 export function handleWebhook(req, res) {
   try {
     if (!bot) {
-      console.error('Bot not initialized');
       return res.status(500).json({ error: 'Bot not initialized' });
     }
-    
-    // Process the update
     bot.processUpdate(req.body);
     res.sendStatus(200);
   } catch (error) {
@@ -86,12 +64,19 @@ export function handleWebhook(req, res) {
 }
 
 // ============================================
+// GENERATE INVITE LINK
+// ============================================
+export function generateInviteLink(coupleId) {
+  return `https://t.me/${BOT_USERNAME}?start=ref_${coupleId}`;
+}
+
+// ============================================
 // BOT COMMAND HANDLERS
 // ============================================
 
 if (bot) {
   
-  // ============ /start COMMAND ============
+  // ============ /start COMMAND with Deep Linking ============
   bot.onText(/\/start(.+)?/, async (msg, match) => {
     const chatId = msg.chat.id;
     const firstName = msg.chat.first_name || 'User';
@@ -100,11 +85,15 @@ if (bot) {
     const param = match[1] ? match[1].trim() : '';
     let coupleId = null;
     
+    // Parse deep link: /start ref_COUPLEID
     if (param && param.startsWith('ref_')) {
       coupleId = param.substring(4);
     }
     
     try {
+      console.log(`📥 /start from ${firstName} (${chatId}) with param: ${param || 'none'}`);
+      
+      // Find or create user
       let user = await User.findOne({ telegramId: chatId.toString() });
       
       if (!user) {
@@ -123,6 +112,7 @@ if (bot) {
         console.log(`📝 New user registered: ${firstName} (${chatId})`);
       }
       
+      // Check if user already has a couple
       if (user.coupleId) {
         const couple = await Couple.findById(user.coupleId);
         await bot.sendMessage(chatId, `
@@ -145,13 +135,170 @@ Enjoy your time together! 🎉
         return;
       }
       
+      // ============ HANDLE INVITE FROM DEEP LINK ============
       if (coupleId) {
         const couple = await Couple.findById(coupleId);
+        
+        if (!couple) {
+          await bot.sendMessage(chatId, `
+❌ <b>Invalid Invitation</b>
+
+This invitation link is no longer valid.
+
+Please ask your partner to send you a new invitation.
+
+💕 LoveVerse
+          `, {
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '📱 Open App', url: APP_URL }]
+              ]
+            }
+          });
+          return;
+        }
+        
+        // Check if couple already has two members
+        if (couple.user2) {
+          await bot.sendMessage(chatId, `
+❌ <b>Couple Already Connected</b>
+
+This couple already has two members.
+
+💕 LoveVerse
+          `, {
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '📱 Open App', url: APP_URL }]
+              ]
+            }
+          });
+          return;
+        }
+        
+        // Check if this user was the one who created the couple
+        if (couple.user1.toString() === user._id.toString()) {
+          await bot.sendMessage(chatId, `
+❌ <b>You created this couple!</b>
+
+You can't join your own couple.
+Open the app to invite your partner.
+
+${APP_URL}
+          `, {
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '📱 Open App', url: APP_URL }]
+              ]
+            }
+          });
+          return;
+        }
+        
+        // ============ ACCEPT INVITE AUTOMATICALLY ============
+        console.log(`✅ Auto-accepting invite for ${firstName} to couple ${coupleId}`);
+        
+        // Add user as second partner
+        couple.user2 = user._id;
+        couple.nickname2 = user.firstName;
+        couple.isPaired = true;
+        couple.pendingInvite = null;
+        await couple.save();
+        
+        // Update user
+        user.coupleId = couple._id;
+        user.role = 'user2';
+        await user.save();
+        
+        // Mark pending invite as accepted
+        const pendingInvite = await PendingInvite.findOne({
+          coupleId: couple._id,
+          telegramId: chatId.toString(),
+          status: 'pending'
+        });
+        
+        if (pendingInvite) {
+          pendingInvite.status = 'accepted';
+          pendingInvite.acceptedAt = new Date();
+          await pendingInvite.save();
+        }
+        
+        // Get inviter info
+        const inviter = await User.findById(couple.user1);
+        const inviterName = inviter ? inviter.firstName : 'Your partner';
+        
+        // Send success message to new user
+        await bot.sendMessage(chatId, `
+🎉 <b>You're Connected!</b>
+
+You are now connected with <b>${inviterName}</b> on LoveVerse!
+
+<b>What's next?</b>
+1. 📱 Open the app
+2. 💬 Send a sweet message
+3. 🎮 Play a game together
+4. 📸 Share your first memory
+
+${APP_URL}
+
+Start your beautiful journey together! 💕
+        `, {
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '💕 Open App', url: APP_URL }],
+              [{ text: '💬 Send Message', url: `${APP_URL}/chat` }]
+            ]
+          }
+        });
+        
+        // Notify the inviter
+        if (inviter) {
+          try {
+            await bot.sendMessage(inviter.telegramId, `
+🎉 <b>${user.firstName} has accepted your invitation!</b>
+
+You and ${user.firstName} are now connected on LoveVerse!
+
+Start your journey together:
+💬 Chat: ${APP_URL}/chat
+🎮 Play games: ${APP_URL}/games
+📸 Share memories: ${APP_URL}/memories
+
+Enjoy! 💕
+            `, {
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: '💕 Open App', url: APP_URL }]
+                ]
+              }
+            });
+          } catch (error) {
+            console.error('Failed to notify inviter:', error);
+          }
+        }
+        
+        return;
+      }
+      
+      // ============ NEW USER (NO INVITE) ============
+      // Check if user has a pending invite
+      const pendingInvite = await PendingInvite.findOne({
+        telegramId: chatId.toString(),
+        status: 'pending'
+      });
+      
+      if (pendingInvite) {
+        const couple = await Couple.findById(pendingInvite.coupleId);
         if (couple && !couple.user2) {
           await bot.sendMessage(chatId, `
-💕 <b>You've been invited to join a couple!</b>
+💕 <b>You have a pending invitation!</b>
 
-${couple.nickname1 || 'Someone'} has invited you to become their partner on LoveVerse.
+<b>${pendingInvite.inviterName}</b> is waiting for you to join them on LoveVerse.
 
 Click the button below to accept the invitation:
           `, {
@@ -160,26 +307,17 @@ Click the button below to accept the invitation:
               inline_keyboard: [
                 [{ 
                   text: '💕 Accept Invite', 
-                  url: `${APP_URL}/accept-invite?coupleId=${coupleId}&userId=${chatId}`
+                  url: `${APP_URL}/accept-invite?coupleId=${couple._id}&userId=${chatId}`
                 }],
                 [{ text: '📱 Open App', url: APP_URL }]
               ]
             }
           });
-          
-          const pendingInvite = new PendingInvite({
-            coupleId: coupleId,
-            username: username || chatId.toString(),
-            telegramId: chatId.toString(),
-            pairingCode: couple.pairingCode,
-            inviterName: couple.nickname1 || 'Your partner',
-            status: 'pending',
-          });
-          await pendingInvite.save();
           return;
         }
       }
       
+      // New user - show welcome
       await bot.sendMessage(chatId, `
 💕 <b>Welcome to LoveVerse!</b>
 
@@ -230,12 +368,17 @@ Have a beautiful journey together! 💕
 /help - Show this help
 /status - Check your profile
 /leaderboard - Top users
-/invite @username - Invite someone
 
-<b>How to use LoveVerse:</b>
-1. Open the mini app
-2. Create or join a couple
-3. Enjoy games, chat, and memories!
+<b>How to invite your partner:</b>
+1. Open the LoveVerse app
+2. Click "Connect with Partner"
+3. Enter their username
+4. They'll receive an invitation link
+
+<b>How to accept an invitation:</b>
+1. Click the link you received
+2. The bot will auto-connect you
+3. Open the app and start!
 
 ${APP_URL}
     `, {
@@ -246,68 +389,6 @@ ${APP_URL}
         ]
       }
     });
-  });
-
-  // ============ /invite COMMAND ============
-  bot.onText(/\/invite (.+)/, async (msg, match) => {
-    const chatId = msg.chat.id;
-    const targetUsername = match[1].trim().replace('@', '');
-    
-    try {
-      const user = await User.findOne({ telegramId: chatId.toString() });
-      
-      if (!user || !user.coupleId) {
-        await bot.sendMessage(chatId, `
-❌ <b>You need to be in a couple first!</b>
-
-Create a couple in the app and try again.
-${APP_URL}
-        `, {
-          parse_mode: 'HTML',
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '📱 Open App', url: APP_URL }]
-            ]
-          }
-        });
-        return;
-      }
-      
-      const couple = await Couple.findById(user.coupleId);
-      const inviterName = user.firstName || 'Your partner';
-      const pairingCode = couple.pairingCode || 'N/A';
-      
-      const result = await sendInviteByUsername(
-        targetUsername,
-        user.coupleId,
-        inviterName,
-        pairingCode
-      );
-      
-      if (result.success) {
-        await bot.sendMessage(chatId, `
-✅ <b>Invite sent successfully!</b>
-
-Your invitation has been sent to @${targetUsername}.
-They will receive it in their Telegram.
-
-💕 LoveVerse
-        `, {
-          parse_mode: 'HTML'
-        });
-      } else {
-        await bot.sendMessage(chatId, `
-❌ <b>Failed to send invite</b>
-
-${result.message || 'Please try again later.'}
-        `, {
-          parse_mode: 'HTML'
-        });
-      }
-    } catch (error) {
-      console.error('Invite command error:', error);
-      await bot.sendMessage(chatId, '❌ Failed to send invite. Please try again.');
-    }
   });
 
   // ============ /status COMMAND ============
@@ -347,8 +428,9 @@ ${APP_URL}
       if (user.coupleId) {
         const couple = await Couple.findById(user.coupleId);
         if (couple) {
+          const partner = couple.user2 ? await User.findById(couple.user2) : null;
           message += `
-💕 <b>Couple:</b> ${couple.nickname1 || 'You'} & ${couple.nickname2 || 'Partner'}
+💕 <b>Partner:</b> ${partner ? partner.firstName : 'Waiting...'}
 ❤️ <b>Relationship Level:</b> ${couple.relationshipLevel || 1}
           `;
         }
@@ -410,7 +492,6 @@ ${APP_URL}
   // ============ CALLBACK QUERY HANDLERS ============
   bot.on('callback_query', async (callbackQuery) => {
     const chatId = callbackQuery.message.chat.id;
-    const messageId = callbackQuery.message.message_id;
     
     try {
       await bot.answerCallbackQuery(callbackQuery.id, {
@@ -435,17 +516,6 @@ Click the button below to open the app:
     }
   });
 
-  // ============ ERROR HANDLING ============
-  bot.on('error', (error) => {
-    console.error('Bot error:', error);
-  });
-
-  if (!IS_PRODUCTION) {
-    bot.on('polling_error', (error) => {
-      console.error('Polling error:', error);
-    });
-  }
-
   console.log('🤖 Bot commands registered');
 }
 
@@ -454,7 +524,14 @@ Click the button below to open the app:
 // ============================================
 
 /**
- * Send an invite to a user by their username
+ * Generate an invite link for a couple
+ */
+export function generateInviteLink(coupleId) {
+  return `https://t.me/${BOT_USERNAME}?start=ref_${coupleId}`;
+}
+
+/**
+ * Send invite to a user - always use deep link if they haven't started the bot
  */
 export async function sendInviteByUsername(username, coupleId, inviterName, pairingCode) {
   try {
@@ -467,86 +544,95 @@ export async function sendInviteByUsername(username, coupleId, inviterName, pair
 
     const cleanUsername = username.replace('@', '').trim();
     
-    let chatInfo;
+    // Generate the deep link
+    const deepLink = generateInviteLink(coupleId);
+    
+    // Try to find the user in our database
+    const existingUser = await User.findOne({ username: cleanUsername });
+    
+    // Try to get chat info from Telegram
+    let chatId = null;
+    let userExists = false;
+    
     try {
-      chatInfo = await bot.getChat(`@${cleanUsername}`);
+      const chatInfo = await bot.getChat(`@${cleanUsername}`);
+      chatId = chatInfo.id;
+      userExists = true;
     } catch (error) {
-      return { 
-        success: false, 
-        message: `User @${cleanUsername} not found on Telegram.` 
-      };
+      // User doesn't exist on Telegram or hasn't started the bot
+      console.log(`User @${cleanUsername} not found on Telegram or hasn't started the bot`);
     }
-
-    const chatId = chatInfo.id;
-
-    // Check if user already has a pending invite
-    const existingInvite = await PendingInvite.findOne({
-      coupleId: coupleId,
-      telegramId: chatId.toString(),
-      status: 'pending'
-    });
-
-    if (existingInvite) {
-      return {
-        success: false,
-        message: `User @${cleanUsername} already has a pending invite.`
-      };
-    }
-
+    
+    // Create or update pending invite
     const pendingInvite = new PendingInvite({
       coupleId: coupleId,
       username: cleanUsername,
-      telegramId: chatId.toString(),
+      telegramId: chatId ? chatId.toString() : 'unknown',
       pairingCode: pairingCode || 'N/A',
       inviterName: inviterName || 'Someone',
       status: 'pending',
     });
     await pendingInvite.save();
-
-    const message = `
+    
+    // If the user has started the bot, try to send a direct message
+    if (chatId && userExists) {
+      try {
+        const message = `
 💕 <b>You've been invited to join LoveVerse!</b>
 
 <b>${inviterName}</b> has invited you to become their partner on LoveVerse!
 
 <b>✨ What is LoveVerse?</b>
-• 🎮 10+ fun games for couples
-• 💬 Private and secure chat
-• 📸 Share memories and photos
+• 🎮 Fun games for couples
+• 💬 Private chat
+• 📸 Share memories
 • 📅 Plan dates together
 
-<b>Join now and start your journey! 💕</b>
-    `;
+Click the button below to accept the invitation:
+        `;
 
-    const keyboard = {
-      inline_keyboard: [
-        [{ 
-          text: '💕 Accept Invite', 
-          url: `${APP_URL}/accept-invite?coupleId=${coupleId}&userId=${chatId}`
-        }],
-        [{ 
-          text: '📱 Open App', 
-          url: APP_URL 
-        }],
-        [{ 
-          text: 'ℹ️ Learn More', 
-          callback_data: 'learn_more'
-        }]
-      ]
-    };
+        const keyboard = {
+          inline_keyboard: [
+            [{ 
+              text: '💕 Accept Invite', 
+              url: deepLink
+            }],
+            [{ 
+              text: '📱 Open App', 
+              url: APP_URL 
+            }]
+          ]
+        };
 
-    await bot.sendMessage(chatId, message, {
-      parse_mode: 'HTML',
-      reply_markup: keyboard
-    });
+        await bot.sendMessage(chatId, message, {
+          parse_mode: 'HTML',
+          reply_markup: keyboard
+        });
 
-    console.log(`📨 Invite sent to @${cleanUsername} for couple ${coupleId}`);
+        console.log(`📨 Direct invite sent to @${cleanUsername}`);
+        
+        return { 
+          success: true, 
+          message: `Invite sent to @${cleanUsername}!`,
+          type: 'direct',
+          deepLink: deepLink
+        };
+        
+      } catch (error) {
+        console.log(`Failed to send direct message to @${cleanUsername}, falling back to deep link`);
+      }
+    }
+    
+    // If direct message failed or user hasn't started the bot, return the deep link
+    console.log(`📨 Deep link generated for @${cleanUsername}: ${deepLink}`);
     
     return { 
       success: true, 
-      message: `Invite sent to @${cleanUsername}!`,
-      chatId: chatId
+      message: `Invite link generated for @${cleanUsername}! Share this link with them: ${deepLink}`,
+      type: 'deep_link',
+      deepLink: deepLink
     };
-
+    
   } catch (error) {
     console.error('Send invite error:', error);
     return { 
@@ -557,7 +643,7 @@ export async function sendInviteByUsername(username, coupleId, inviterName, pair
 }
 
 /**
- * Notify all members of a couple
+ * Notify couple members
  */
 export async function notifyCoupleMembers(coupleId, message) {
   try {
@@ -573,7 +659,7 @@ export async function notifyCoupleMembers(coupleId, message) {
         await bot.sendMessage(user.telegramId, message, {
           parse_mode: 'HTML'
         });
-        console.log(`📨 Notification sent to ${user.firstName} (${user.telegramId})`);
+        console.log(`📨 Notification sent to ${user.firstName}`);
       } catch (error) {
         console.error(`Failed to notify user ${user.telegramId}:`, error);
       }
@@ -600,48 +686,11 @@ export async function notifyUser(telegramId, message, options = {}) {
   }
 }
 
-/**
- * Send a game invitation
- */
-export async function sendGameInvite(coupleId, gameType, inviterName) {
-  try {
-    if (!bot) return;
-
-    const couple = await Couple.findById(coupleId).populate('user1 user2');
-    if (!couple) return;
-
-    const partner = couple.user2 || couple.user1;
-    if (!partner) return;
-
-    const message = `
-🎮 <b>Game Invitation!</b>
-
-${inviterName} has invited you to play <b>${gameType.replace('_', ' ')}</b>!
-
-Open the app to join the game:
-${APP_URL}
-
-💕 LoveVerse
-    `;
-
-    await bot.sendMessage(partner.telegramId, message, {
-      parse_mode: 'HTML',
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '🎮 Join Game', url: `${APP_URL}/games` }]
-        ]
-      }
-    });
-  } catch (error) {
-    console.error('Send game invite error:', error);
-  }
-}
-
 export default {
   bot,
   handleWebhook,
+  generateInviteLink,
   sendInviteByUsername,
   notifyCoupleMembers,
   notifyUser,
-  sendGameInvite,
 };
