@@ -54,6 +54,7 @@ class LoveVerseApp {
       
       if (data.success) {
         this.user = data.user;
+        console.log('✅ User loaded:', this.user);
         
         // Initialize socket
         this.socket = initializeSocket(token, this.user.id);
@@ -66,6 +67,9 @@ class LoveVerseApp {
         } else {
           this.showConnectCouple();
         }
+        
+        // Update invite link with actual username
+        this.updateInviteLink();
       }
     } catch (error) {
       console.error('Failed to load user data:', error);
@@ -108,6 +112,30 @@ class LoveVerseApp {
   hideConnectCouple() {
     const wrapper = document.querySelector('.connect-couple-wrapper');
     if (wrapper) wrapper.classList.add('hidden');
+  }
+
+  updateInviteLink() {
+    try {
+      const username = this.user?.username || 
+                       window.Telegram?.WebApp?.initDataUnsafe?.user?.username || 
+                       this.user?.firstName || 
+                       'friend';
+      
+      const link = `${APP_URL}/?ref=${username}`;
+      
+      const display = document.getElementById('inviteLinkDisplay');
+      const input = document.getElementById('inviteLinkInput');
+      
+      if (display) {
+        display.textContent = link;
+        console.log('📋 Invite link updated:', link);
+      }
+      if (input) {
+        input.value = link;
+      }
+    } catch (e) {
+      console.log('Error updating invite link:', e);
+    }
   }
 
   setupEventListeners() {
@@ -210,23 +238,29 @@ class LoveVerseApp {
     
     // Update invite link with current user's username
     try {
-      const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
-      if (user?.username) {
-        const link = `${APP_URL}/?ref=@${user.username}`;
-        const input = document.getElementById('inviteLinkInput');
-        const display = document.getElementById('inviteLinkDisplay');
-        if (input) input.value = link;
-        if (display) display.textContent = link;
+      const username = this.user?.username || 
+                       window.Telegram?.WebApp?.initDataUnsafe?.user?.username || 
+                       this.user?.firstName || 
+                       'friend';
+      const link = `${APP_URL}/?ref=${username}`;
+      
+      const input = document.getElementById('inviteLinkInput');
+      const display = document.getElementById('inviteLinkDisplay');
+      if (input) {
+        input.value = link;
+        console.log('📋 Modal invite link updated:', link);
       }
+      if (display) display.textContent = link;
     } catch (e) {
-      console.log('Telegram user not available');
+      console.log('Error updating modal invite link:', e);
     }
   }
 
   closeConnectModal() {
     const modal = document.getElementById('connectCoupleModal');
     if (modal) modal.classList.add('hidden');
-    document.getElementById('usernameInput').value = '';
+    const input = document.getElementById('usernameInput');
+    if (input) input.value = '';
   }
 
   copyInviteLink() {
@@ -241,25 +275,29 @@ class LoveVerseApp {
         const btn = document.getElementById('copyLinkBtn');
         btn.textContent = '✅ Copied!';
         setTimeout(() => btn.textContent = '📋 Copy', 2000);
+        this.showToast('📋 Link copied to clipboard!', 'success');
       }).catch(() => {
         document.execCommand('copy');
         const btn = document.getElementById('copyLinkBtn');
         btn.textContent = '✅ Copied!';
         setTimeout(() => btn.textContent = '📋 Copy', 2000);
+        this.showToast('📋 Link copied to clipboard!', 'success');
       });
     } else {
       document.execCommand('copy');
       const btn = document.getElementById('copyLinkBtn');
       btn.textContent = '✅ Copied!';
       setTimeout(() => btn.textContent = '📋 Copy', 2000);
+      this.showToast('📋 Link copied to clipboard!', 'success');
     }
   }
 
   async sendInvite() {
-    const username = document.getElementById('usernameInput').value.trim();
+    const usernameInput = document.getElementById('usernameInput');
+    const username = usernameInput?.value.trim();
     
     if (!username) {
-      alert('Please enter a username');
+      this.showToast('❌ Please enter a username', 'error');
       return;
     }
 
@@ -273,15 +311,20 @@ class LoveVerseApp {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/couple/invite`, {
+      const coupleId = this.user?.coupleId || this.couple?._id;
+      
+      if (!coupleId) {
+        throw new Error('No couple found. Please create a couple first.');
+      }
+      
+      const response = await fetch(`${API_URL}/couple/${coupleId}/invite`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ 
-          username: username,
-          inviteLink: `${APP_URL}/?ref=@${username}`
+          username: username
         })
       });
 
@@ -291,8 +334,13 @@ class LoveVerseApp {
       this.closeConnectModal();
 
       if (data.success) {
-        this.showToast(`✅ Invite sent to @${username}!`, 'success');
-        document.getElementById('usernameInput').value = '';
+        this.showToast(`✅ ${data.message}`, 'success');
+        if (usernameInput) usernameInput.value = '';
+        
+        // If deep link was generated, show it
+        if (data.deepLink) {
+          this.showToast(`🔗 Share this link: ${data.deepLink}`, 'info');
+        }
       } else {
         this.showToast(`❌ ${data.error || 'Failed to send invite'}`, 'error');
       }
@@ -344,7 +392,6 @@ class LoveVerseApp {
     if (pageElement) {
       pageElement.classList.add('active');
       this.currentPage = page;
-      // Load page content
       this.loadPageContent(page);
     }
   }
@@ -374,7 +421,6 @@ class LoveVerseApp {
   setupSocketListeners() {
     if (!this.socket) return;
 
-    // Online status
     this.socket.on('user_online', (data) => {
       this.updateOnlineStatus(true);
     });
@@ -383,17 +429,14 @@ class LoveVerseApp {
       this.updateOnlineStatus(false);
     });
 
-    // Messages
     this.socket.on('new_message', (data) => {
       this.handleNewMessage(data);
     });
 
-    // Game updates
     this.socket.on('game_update', (data) => {
       this.handleGameUpdate(data);
     });
 
-    // Notifications
     this.socket.on('notification', (data) => {
       this.showNotification(data);
     });
@@ -411,11 +454,8 @@ class LoveVerseApp {
 
   handleNewMessage(data) {
     if (this.currentPage === 'chat') {
-      // Message will be loaded by chat page
       return;
     }
-    
-    // Show notification
     this.showNotification({
       type: 'message',
       message: 'New message from your love 💕'
@@ -424,7 +464,6 @@ class LoveVerseApp {
 
   handleGameUpdate(data) {
     if (this.currentPage === 'games') {
-      // Game update will be handled by games page
       return;
     }
   }
@@ -437,12 +476,8 @@ class LoveVerseApp {
         <span>${data.message}</span>
       </div>
     `;
-    
     document.body.appendChild(notification);
-    
-    setTimeout(() => {
-      notification.remove();
-    }, 5000);
+    setTimeout(() => notification.remove(), 5000);
   }
 
   logout() {
