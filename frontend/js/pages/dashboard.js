@@ -53,23 +53,13 @@ export async function loadDashboard(user, couple, token) {
       if (connectWrapper) connectWrapper.classList.add('hidden');
     } else {
       document.getElementById('relationshipStatus').textContent = '👥 Not paired yet';
+      
       // Show connect couple button if not paired
       const connectWrapper = document.querySelector('.connect-couple-wrapper');
       if (connectWrapper) connectWrapper.classList.remove('hidden');
       
-      // Update invite link with user's username
-      try {
-        const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-        if (tgUser?.username) {
-          const link = `${APP_URL}/?ref=@${tgUser.username}`;
-          const display = document.getElementById('inviteLinkDisplay');
-          const input = document.getElementById('inviteLinkInput');
-          if (display) display.textContent = link;
-          if (input) input.value = link;
-        }
-      } catch (e) {
-        console.log('Telegram user not available');
-      }
+      // ===== FIX: Update invite link with actual username =====
+      updateInviteLink(user);
     }
 
     // Animate dashboard elements
@@ -85,6 +75,32 @@ export async function loadDashboard(user, couple, token) {
     setupConnectCoupleListeners(token);
   } catch (error) {
     console.error('Dashboard load error:', error);
+  }
+}
+
+// ===== NEW FUNCTION: Update invite link with actual username =====
+function updateInviteLink(user) {
+  try {
+    // Get username from multiple sources
+    const username = user?.username || 
+                     window.Telegram?.WebApp?.initDataUnsafe?.user?.username || 
+                     user?.firstName || 
+                     'friend';
+    
+    const link = `${APP_URL}/?ref=${username}`;
+    
+    const display = document.getElementById('inviteLinkDisplay');
+    const input = document.getElementById('inviteLinkInput');
+    
+    if (display) {
+      display.textContent = link;
+      console.log('📋 Dashboard invite link updated:', link);
+    }
+    if (input) {
+      input.value = link;
+    }
+  } catch (e) {
+    console.log('Error updating dashboard invite link:', e);
   }
 }
 
@@ -192,16 +208,20 @@ function openConnectModal() {
   
   // Update invite link with current user's username
   try {
-    const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
-    if (user?.username) {
-      const link = `${APP_URL}/?ref=@${user.username}`;
-      const input = document.getElementById('inviteLinkInput');
-      const display = document.getElementById('inviteLinkDisplay');
-      if (input) input.value = link;
-      if (display) display.textContent = link;
+    const user = window.loveVerseApp?.user;
+    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    const username = user?.username || tgUser?.username || user?.firstName || 'friend';
+    const link = `${APP_URL}/?ref=${username}`;
+    
+    const input = document.getElementById('inviteLinkInput');
+    const display = document.getElementById('inviteLinkDisplay');
+    if (input) {
+      input.value = link;
+      console.log('📋 Modal invite link updated:', link);
     }
+    if (display) display.textContent = link;
   } catch (e) {
-    console.log('Telegram user not available');
+    console.log('Error updating modal invite link:', e);
   }
 }
 
@@ -259,15 +279,21 @@ async function sendInvite(token) {
   }
 
   try {
-    const response = await fetch(`${API_URL}/couple/invite`, {
+    const user = window.loveVerseApp?.user;
+    const coupleId = user?.coupleId;
+    
+    if (!coupleId) {
+      throw new Error('No couple found. Please create a couple first.');
+    }
+    
+    const response = await fetch(`${API_URL}/couple/${coupleId}/invite`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({ 
-        username: username,
-        inviteLink: `${APP_URL}/?ref=@${username}`
+        username: username
       })
     });
 
@@ -277,8 +303,12 @@ async function sendInvite(token) {
     closeConnectModal();
 
     if (data.success) {
-      showToast(`✅ Invite sent to @${username}!`, 'success');
+      showToast(`✅ ${data.message}`, 'success');
       if (usernameInput) usernameInput.value = '';
+      
+      if (data.deepLink) {
+        showToast(`🔗 Share this link: ${data.deepLink}`, 'info');
+      }
     } else {
       showToast(`❌ ${data.error || 'Failed to send invite'}`, 'error');
     }
@@ -313,4 +343,4 @@ function showToast(message, type = 'info') {
     toast.classList.add('toast-hide');
     setTimeout(() => toast.remove(), 300);
   }, 5000);
-  }
+        }
