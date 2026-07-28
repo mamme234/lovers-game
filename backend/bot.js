@@ -6,7 +6,7 @@ dotenv.config();
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const APP_URL = process.env.APP_URL || 'https://lovers-game.vercel.app';
-const BOT_USERNAME = process.env.BOT_USERNAME || 'LoveVerseBot';
+const BOT_USERNAME = process.env.BOT_USERNAME || 'LoveVerse_bot';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 let bot = null;
@@ -211,6 +211,11 @@ ${APP_URL}
         // Update user
         user.coupleId = couple._id;
         user.role = 'user2';
+        await user.save();
+        
+        // Award welcome bonus
+        user.coins = (user.coins || 0) + 100;
+        user.xp = (user.xp || 0) + 50;
         await user.save();
         
         // Mark pending invite as accepted
@@ -523,11 +528,10 @@ Click the button below to open the app:
 // EXPORT FUNCTIONS
 // ============================================
 
-// generateInviteLink is already exported above at line 45
-// REMOVED duplicate export at line 529
-
 /**
- * Send invite to a user - always use deep link if they haven't started the bot
+ * Send invite to a user by their username
+ * This will send a direct message if the user has started the bot,
+ * or generate a deep link if they haven't
  */
 export async function sendInviteByUsername(username, coupleId, inviterName, pairingCode) {
   try {
@@ -554,12 +558,12 @@ export async function sendInviteByUsername(username, coupleId, inviterName, pair
       const chatInfo = await bot.getChat(`@${cleanUsername}`);
       chatId = chatInfo.id;
       userExists = true;
+      console.log(`✅ Found user @${cleanUsername} on Telegram`);
     } catch (error) {
-      // User doesn't exist on Telegram or hasn't started the bot
-      console.log(`User @${cleanUsername} not found on Telegram or hasn't started the bot`);
+      console.log(`⚠️ User @${cleanUsername} not found on Telegram or hasn't started the bot`);
     }
     
-    // Create or update pending invite
+    // Create pending invite
     const pendingInvite = new PendingInvite({
       coupleId: coupleId,
       username: cleanUsername,
@@ -569,8 +573,9 @@ export async function sendInviteByUsername(username, coupleId, inviterName, pair
       status: 'pending',
     });
     await pendingInvite.save();
+    console.log(`📝 Pending invite created for @${cleanUsername}`);
     
-    // If the user has started the bot, try to send a direct message
+    // If the user exists on Telegram, try to send a direct message
     if (chatId && userExists) {
       try {
         const message = `
@@ -579,12 +584,12 @@ export async function sendInviteByUsername(username, coupleId, inviterName, pair
 <b>${inviterName}</b> has invited you to become their partner on LoveVerse!
 
 <b>✨ What is LoveVerse?</b>
-• 🎮 Fun games for couples
-• 💬 Private chat
-• 📸 Share memories
+• 🎮 10+ fun games for couples
+• 💬 Private and secure chat
+• 📸 Share memories and photos
 • 📅 Plan dates together
 
-Click the button below to accept the invitation:
+<b>Join now and start your journey! 💕</b>
         `;
 
         const keyboard = {
@@ -596,6 +601,10 @@ Click the button below to accept the invitation:
             [{ 
               text: '📱 Open App', 
               url: APP_URL 
+            }],
+            [{ 
+              text: 'ℹ️ Learn More', 
+              callback_data: 'learn_more'
             }]
           ]
         };
@@ -615,7 +624,7 @@ Click the button below to accept the invitation:
         };
         
       } catch (error) {
-        console.log(`Failed to send direct message to @${cleanUsername}, falling back to deep link`);
+        console.log(`⚠️ Failed to send direct message to @${cleanUsername}, falling back to deep link:`, error.message);
       }
     }
     
