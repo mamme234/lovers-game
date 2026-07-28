@@ -204,6 +204,9 @@ export const createCouple = async (req, res) => {
     user.xp = (user.xp || 0) + 50;
     await user.save();
     
+    // Generate invite link via bot
+    const inviteLink = botInvite.generateCoupleLink(couple._id);
+    
     res.json({ 
       success: true, 
       couple,
@@ -211,7 +214,8 @@ export const createCouple = async (req, res) => {
         coins: 100,
         xp: 50,
       },
-      message: 'Couple created successfully! 🎉'
+      inviteLink: inviteLink,
+      message: 'Couple created successfully! Share the invite link with your partner. 🎉'
     });
   } catch (error) {
     console.error('Create couple error:', error);
@@ -252,10 +256,9 @@ export const invitePartner = async (req, res) => {
     }
 
     const inviterName = couple.user1 ? couple.user1.firstName : 'Your partner';
-    const pairingCode = generatePairingCode();
+    const cleanUsername = username.replace('@', '').trim();
     
     // Check if user already has a pending invite
-    const cleanUsername = username.replace('@', '').trim();
     const existingInvite = await PendingInvite.findOne({
       coupleId: coupleId,
       username: cleanUsername,
@@ -273,8 +276,7 @@ export const invitePartner = async (req, res) => {
     const result = await botInvite.sendInviteByUsername(
       username, 
       coupleId, 
-      inviterName,
-      pairingCode
+      inviterName
     );
     
     if (result.success) {
@@ -282,19 +284,17 @@ export const invitePartner = async (req, res) => {
       couple.pendingInvite = {
         username: cleanUsername,
         sentAt: new Date(),
-        status: 'pending',
-        pairingCode: pairingCode
+        status: 'pending'
       };
       await couple.save();
       
       // Generate the deep link for the response
-      const deepLink = botInvite.generateInviteLink(coupleId);
+      const deepLink = botInvite.generateCoupleLink(coupleId);
       
       return res.status(200).json({
         success: true,
         message: result.message,
         couple,
-        pairingCode,
         deepLink: deepLink,
         type: result.type || 'deep_link'
       });
@@ -400,7 +400,8 @@ export const getInviteStatus = async (req, res) => {
     
     return res.status(200).json({
       success: true,
-      pendingInvite: couple.pendingInvite || null
+      pendingInvite: couple.pendingInvite || null,
+      inviteLink: botInvite.generateCoupleLink(coupleId)
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
