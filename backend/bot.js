@@ -64,9 +64,9 @@ export function handleWebhook(req, res) {
 }
 
 // ============================================
-// GENERATE INVITE LINK
+// GENERATE COUPLE LINK
 // ============================================
-export function generateInviteLink(coupleId) {
+export function generateCoupleLink(coupleId) {
   return `https://t.me/${BOT_USERNAME}?start=ref_${coupleId}`;
 }
 
@@ -76,7 +76,7 @@ export function generateInviteLink(coupleId) {
 
 if (bot) {
   
-  // ============ /start COMMAND with Deep Linking ============
+  // ============ /start COMMAND ============
   bot.onText(/\/start(.+)?/, async (msg, match) => {
     const chatId = msg.chat.id;
     const firstName = msg.chat.first_name || 'User';
@@ -112,13 +112,21 @@ if (bot) {
         console.log(`📝 New user registered: ${firstName} (${chatId})`);
       }
       
-      // Check if user already has a couple
+      // ============ CASE 1: User already has a couple ============
       if (user.coupleId) {
         const couple = await Couple.findById(user.coupleId);
+        const partner = couple.user2 ? await User.findById(couple.user2) : null;
+        
         await bot.sendMessage(chatId, `
 💕 <b>Welcome back to LoveVerse!</b>
 
-You're already connected with your partner.
+You're already connected with ${partner ? partner.firstName : 'your partner'}.
+
+<b>Your Couple Info:</b>
+💑 ${couple.nickname1 || 'You'} & ${couple.nickname2 || 'Partner'}
+❤️ Level: ${couple.relationshipLevel || 1}
+⭐ XP: ${couple.relationshipXp || 0}
+
 Open the app to continue your journey together!
 
 ${APP_URL}
@@ -128,14 +136,15 @@ Enjoy your time together! 🎉
           parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [
-              [{ text: '📱 Open App', url: APP_URL }]
+              [{ text: '📱 Open App', url: APP_URL }],
+              [{ text: '💬 Chat with Partner', url: `${APP_URL}/chat` }]
             ]
           }
         });
         return;
       }
       
-      // ============ HANDLE INVITE FROM DEEP LINK ============
+      // ============ CASE 2: User was invited (has coupleId in param) ============
       if (coupleId) {
         const couple = await Couple.findById(coupleId);
         
@@ -184,13 +193,14 @@ This couple already has two members.
 ❌ <b>You created this couple!</b>
 
 You can't join your own couple.
-Open the app to invite your partner.
 
-${APP_URL}
+Share this link with your partner:
+${generateCoupleLink(coupleId)}
           `, {
             parse_mode: 'HTML',
             reply_markup: {
               inline_keyboard: [
+                [{ text: '📋 Copy Link', callback_data: `copy_${generateCoupleLink(coupleId)}` }],
                 [{ text: '📱 Open App', url: APP_URL }]
               ]
             }
@@ -198,7 +208,7 @@ ${APP_URL}
           return;
         }
         
-        // ============ ACCEPT INVITE AUTOMATICALLY ============
+        // ============ ACCEPT INVITE ============
         console.log(`✅ Auto-accepting invite for ${firstName} to couple ${coupleId}`);
         
         // Add user as second partner
@@ -290,67 +300,32 @@ Enjoy! 💕
         return;
       }
       
-      // ============ NEW USER (NO INVITE) ============
-      // Check if user has a pending invite
-      const pendingInvite = await PendingInvite.findOne({
-        telegramId: chatId.toString(),
-        status: 'pending'
-      });
-      
-      if (pendingInvite) {
-        const couple = await Couple.findById(pendingInvite.coupleId);
-        if (couple && !couple.user2) {
-          await bot.sendMessage(chatId, `
-💕 <b>You have a pending invitation!</b>
-
-<b>${pendingInvite.inviterName}</b> is waiting for you to join them on LoveVerse.
-
-Click the button below to accept the invitation:
-          `, {
-            parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [
-                [{ 
-                  text: '💕 Accept Invite', 
-                  url: `${APP_URL}/accept-invite?coupleId=${couple._id}&userId=${chatId}`
-                }],
-                [{ text: '📱 Open App', url: APP_URL }]
-              ]
-            }
-          });
-          return;
-        }
-      }
-      
-      // New user - show welcome
+      // ============ CASE 3: New user (no invite) ============
+      // Show main menu with option to create couple
       await bot.sendMessage(chatId, `
 💕 <b>Welcome to LoveVerse!</b>
 
 Hi ${firstName}! 🎉
 
-LoveVerse is the ultimate couples app for Telegram. 
-Connect with your partner and enjoy:
+You're not in a couple yet. Here are your options:
+
+<b>💑 Create a Couple</b>
+Start your journey by creating a couple and inviting your partner.
+
+<b>🔗 Join a Couple</b>
+If you already have an invite link, click it to join.
 
 <b>Features:</b>
 • 🎮 Fun games
 • 💬 Private chat
 • 📸 Shared memories
 • 📅 Date planner
-• 🏆 Achievements
-
-<b>Get started:</b>
-1. Open the app
-2. Create or join a couple
-3. Start your journey together!
-
-${APP_URL}
-
-Have a beautiful journey together! 💕
       `, {
         parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
-            [{ text: '💕 Get Started', url: APP_URL }]
+            [{ text: '💑 Create Couple', callback_data: 'create_couple' }],
+            [{ text: '📱 Open App', url: APP_URL }]
           ]
         }
       });
@@ -361,39 +336,83 @@ Have a beautiful journey together! 💕
     }
   });
 
-  // ============ /help COMMAND ============
-  bot.onText(/\/help/, async (msg) => {
+  // ============ /create COMMAND ============
+  bot.onText(/\/create/, async (msg) => {
     const chatId = msg.chat.id;
+    const firstName = msg.chat.first_name || 'User';
     
-    await bot.sendMessage(chatId, `
-💕 <b>LoveVerse Help Center</b>
+    try {
+      const user = await User.findOne({ telegramId: chatId.toString() });
+      
+      if (!user) {
+        await bot.sendMessage(chatId, `
+❌ <b>User not found</b>
 
-<b>Commands:</b>
-/start - Start the bot
-/help - Show this help
-/status - Check your profile
-/leaderboard - Top users
-
-<b>How to invite your partner:</b>
-1. Open the LoveVerse app
-2. Click "Connect with Partner"
-3. Enter their username
-4. They'll receive an invitation link
-
-<b>How to accept an invitation:</b>
-1. Click the link you received
-2. The bot will auto-connect you
-3. Open the app and start!
-
-${APP_URL}
-    `, {
-      parse_mode: 'HTML',
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '📱 Open App', url: APP_URL }]
-        ]
+Please start the bot first with /start
+        `, {
+          parse_mode: 'HTML'
+        });
+        return;
       }
-    });
+      
+      if (user.coupleId) {
+        await bot.sendMessage(chatId, `
+❌ <b>You already have a couple!</b>
+
+Use /status to see your couple info.
+        `, {
+          parse_mode: 'HTML'
+        });
+        return;
+      }
+      
+      // Create couple
+      const couple = new Couple({
+        user1: user._id,
+        nickname1: user.firstName,
+        pairingCode: generatePairingCode(),
+        isPaired: false,
+      });
+      await couple.save();
+      
+      // Update user
+      user.coupleId = couple._id;
+      user.role = 'user1';
+      await user.save();
+      
+      // Generate invite link
+      const inviteLink = generateCoupleLink(couple._id);
+      
+      await bot.sendMessage(chatId, `
+💑 <b>Couple Created!</b>
+
+Your couple has been created successfully!
+
+<b>Share this link with your partner:</b>
+${inviteLink}
+
+<b>How it works:</b>
+1. Send this link to your partner
+2. They click it and join the bot
+3. You'll be connected automatically! 🎉
+
+Or open the app to manage your couple:
+${APP_URL}
+      `, {
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '📋 Copy Link', callback_data: `copy_${inviteLink}` }],
+            [{ text: '📤 Share Link', url: `tg://msg_url?url=${encodeURIComponent(inviteLink)}&text=Join%20me%20on%20LoveVerse!` }],
+            [{ text: '📱 Open App', url: APP_URL }]
+          ]
+        }
+      });
+      
+    } catch (error) {
+      console.error('Create couple error:', error);
+      await bot.sendMessage(chatId, '❌ Failed to create couple. Please try again.');
+    }
   });
 
   // ============ /status COMMAND ============
@@ -407,15 +426,9 @@ ${APP_URL}
         await bot.sendMessage(chatId, `
 ❌ <b>User not found</b>
 
-Please open the app first to register:
-${APP_URL}
+Please start the bot first with /start
         `, {
-          parse_mode: 'HTML',
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '📱 Open App', url: APP_URL }]
-            ]
-          }
+          parse_mode: 'HTML'
         });
         return;
       }
@@ -435,13 +448,19 @@ ${APP_URL}
         if (couple) {
           const partner = couple.user2 ? await User.findById(couple.user2) : null;
           message += `
-💕 <b>Partner:</b> ${partner ? partner.firstName : 'Waiting...'}
+💕 <b>Couple:</b> ${couple.nickname1 || 'You'} & ${partner ? partner.firstName : 'Waiting for partner...'}
 ❤️ <b>Relationship Level:</b> ${couple.relationshipLevel || 1}
+${!partner ? `
+📨 <b>Invite Link:</b>
+${generateCoupleLink(couple._id)}
+` : ''}
           `;
         }
       } else {
         message += `
-💕 <b>Status:</b> Not paired yet
+💕 <b>Status:</b> Not in a couple
+
+Use /create to create a couple!
         `;
       }
       
@@ -459,65 +478,123 @@ ${APP_URL}
     }
   });
 
-  // ============ /leaderboard COMMAND ============
-  bot.onText(/\/leaderboard/, async (msg) => {
+  // ============ /help COMMAND ============
+  bot.onText(/\/help/, async (msg) => {
     const chatId = msg.chat.id;
     
-    try {
-      const topUsers = await User.find()
-        .sort({ level: -1, xp: -1 })
-        .limit(10)
-        .select('firstName lastName level xp coins');
-      
-      let message = `🏆 <b>LoveVerse Leaderboard</b>\n\n`;
-      
-      if (topUsers.length === 0) {
-        message += 'No users yet. Be the first! 🎉';
-      } else {
-        topUsers.forEach((user, index) => {
-          const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
-          message += `${medal} <b>${user.firstName}</b> - Level ${user.level} | ${user.xp} XP\n`;
-        });
+    await bot.sendMessage(chatId, `
+💕 <b>LoveVerse Help Center</b>
+
+<b>Commands:</b>
+/start - Start the bot
+/create - Create a couple
+/status - Check your profile
+/help - Show this help
+
+<b>How to use LoveVerse:</b>
+1. Start the bot with /start
+2. Use /create to create a couple
+3. Share the invite link with your partner
+4. Your partner clicks the link
+5. You're connected! 🎉
+
+<b>Or use the mini app:</b>
+${APP_URL}
+    `, {
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '📱 Open App', url: APP_URL }]
+        ]
       }
-      
-      await bot.sendMessage(chatId, message, {
-        parse_mode: 'HTML',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '📱 Open App', url: APP_URL }]
-          ]
-        }
-      });
-    } catch (error) {
-      console.error('Leaderboard error:', error);
-      await bot.sendMessage(chatId, '❌ Failed to get leaderboard.');
-    }
+    });
   });
 
   // ============ CALLBACK QUERY HANDLERS ============
   bot.on('callback_query', async (callbackQuery) => {
     const chatId = callbackQuery.message.chat.id;
+    const data = callbackQuery.data;
     
     try {
+      if (data === 'create_couple') {
+        await bot.answerCallbackQuery(callbackQuery.id, {
+          text: 'Creating couple...',
+          show_alert: false
+        });
+        
+        // Simulate /create command
+        const user = await User.findOne({ telegramId: chatId.toString() });
+        
+        if (user && user.coupleId) {
+          await bot.sendMessage(chatId, '❌ You already have a couple!');
+          return;
+        }
+        
+        // Create couple
+        const couple = new Couple({
+          user1: user._id,
+          nickname1: user.firstName,
+          pairingCode: generatePairingCode(),
+          isPaired: false,
+        });
+        await couple.save();
+        
+        user.coupleId = couple._id;
+        user.role = 'user1';
+        await user.save();
+        
+        const inviteLink = generateCoupleLink(couple._id);
+        
+        await bot.sendMessage(chatId, `
+💑 <b>Couple Created!</b>
+
+Share this link with your partner:
+${inviteLink}
+
+They'll be connected automatically when they click it! 💕
+        `, {
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '📋 Copy Link', callback_data: `copy_${inviteLink}` }],
+              [{ text: '📤 Share Link', url: `tg://msg_url?url=${encodeURIComponent(inviteLink)}&text=Join%20me%20on%20LoveVerse!` }],
+              [{ text: '📱 Open App', url: APP_URL }]
+            ]
+          }
+        });
+        return;
+      }
+      
+      if (data.startsWith('copy_')) {
+        const link = data.replace('copy_', '');
+        await bot.answerCallbackQuery(callbackQuery.id, {
+          text: 'Link copied! 📋',
+          show_alert: false
+        });
+        // Note: Can't actually copy to clipboard from bot, but user can select text
+        await bot.sendMessage(chatId, `
+📋 <b>Your invite link:</b>
+
+${link}
+
+Send this to your partner! 💕
+        `, {
+          parse_mode: 'HTML'
+        });
+        return;
+      }
+      
       await bot.answerCallbackQuery(callbackQuery.id, {
         text: 'Opening app...',
         show_alert: false
       });
       
-      await bot.sendMessage(chatId, `
-💕 <b>Opening LoveVerse...</b>
-
-Click the button below to open the app:
-        `, {
-          parse_mode: 'HTML',
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '📱 Open App', url: APP_URL }]
-            ]
-          }
-        });
     } catch (error) {
       console.error('Callback error:', error);
+      await bot.answerCallbackQuery(callbackQuery.id, {
+        text: 'Something went wrong',
+        show_alert: true
+      });
     }
   });
 
@@ -525,15 +602,26 @@ Click the button below to open the app:
 }
 
 // ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+function generatePairingCode() {
+  const crypto = await import('crypto');
+  return crypto.randomBytes(3).toString('hex').toUpperCase();
+}
+
+// ============================================
 // EXPORT FUNCTIONS
 // ============================================
 
+export function generateCoupleLink(coupleId) {
+  return `https://t.me/${BOT_USERNAME}?start=ref_${coupleId}`;
+}
+
 /**
  * Send invite to a user by their username
- * This will send a direct message if the user has started the bot,
- * or generate a deep link if they haven't
  */
-export async function sendInviteByUsername(username, coupleId, inviterName, pairingCode) {
+export async function sendInviteByUsername(username, coupleId, inviterName) {
   try {
     if (!bot) {
       return { 
@@ -543,12 +631,7 @@ export async function sendInviteByUsername(username, coupleId, inviterName, pair
     }
 
     const cleanUsername = username.replace('@', '').trim();
-    
-    // Generate the deep link
-    const deepLink = generateInviteLink(coupleId);
-    
-    // Try to find the user in our database
-    const existingUser = await User.findOne({ username: cleanUsername });
+    const deepLink = generateCoupleLink(coupleId);
     
     // Try to get chat info from Telegram
     let chatId = null;
@@ -558,9 +641,8 @@ export async function sendInviteByUsername(username, coupleId, inviterName, pair
       const chatInfo = await bot.getChat(`@${cleanUsername}`);
       chatId = chatInfo.id;
       userExists = true;
-      console.log(`✅ Found user @${cleanUsername} on Telegram`);
     } catch (error) {
-      console.log(`⚠️ User @${cleanUsername} not found on Telegram or hasn't started the bot`);
+      console.log(`⚠️ User @${cleanUsername} not found on Telegram`);
     }
     
     // Create pending invite
@@ -568,44 +650,27 @@ export async function sendInviteByUsername(username, coupleId, inviterName, pair
       coupleId: coupleId,
       username: cleanUsername,
       telegramId: chatId ? chatId.toString() : 'unknown',
-      pairingCode: pairingCode || 'N/A',
+      pairingCode: 'N/A',
       inviterName: inviterName || 'Someone',
       status: 'pending',
     });
     await pendingInvite.save();
-    console.log(`📝 Pending invite created for @${cleanUsername}`);
     
-    // If the user exists on Telegram, try to send a direct message
+    // If user exists, send direct message
     if (chatId && userExists) {
       try {
         const message = `
 💕 <b>You've been invited to join LoveVerse!</b>
 
-<b>${inviterName}</b> has invited you to become their partner on LoveVerse!
+<b>${inviterName}</b> has invited you to become their partner!
 
-<b>✨ What is LoveVerse?</b>
-• 🎮 10+ fun games for couples
-• 💬 Private and secure chat
-• 📸 Share memories and photos
-• 📅 Plan dates together
-
-<b>Join now and start your journey! 💕</b>
+Click the button below to accept:
         `;
 
         const keyboard = {
           inline_keyboard: [
-            [{ 
-              text: '💕 Accept Invite', 
-              url: deepLink
-            }],
-            [{ 
-              text: '📱 Open App', 
-              url: APP_URL 
-            }],
-            [{ 
-              text: 'ℹ️ Learn More', 
-              callback_data: 'learn_more'
-            }]
+            [{ text: '💕 Accept Invite', url: deepLink }],
+            [{ text: '📱 Open App', url: APP_URL }]
           ]
         };
 
@@ -614,26 +679,21 @@ export async function sendInviteByUsername(username, coupleId, inviterName, pair
           reply_markup: keyboard
         });
 
-        console.log(`📨 Direct invite sent to @${cleanUsername}`);
-        
         return { 
           success: true, 
           message: `Invite sent to @${cleanUsername}!`,
           type: 'direct',
           deepLink: deepLink
         };
-        
       } catch (error) {
-        console.log(`⚠️ Failed to send direct message to @${cleanUsername}, falling back to deep link:`, error.message);
+        console.log('Failed to send direct message:', error);
       }
     }
     
-    // If direct message failed or user hasn't started the bot, return the deep link
-    console.log(`📨 Deep link generated for @${cleanUsername}: ${deepLink}`);
-    
+    // Return deep link
     return { 
       success: true, 
-      message: `Invite link generated for @${cleanUsername}! Share this link with them: ${deepLink}`,
+      message: `Share this link with @${cleanUsername}: ${deepLink}`,
       type: 'deep_link',
       deepLink: deepLink
     };
@@ -664,7 +724,6 @@ export async function notifyCoupleMembers(coupleId, message) {
         await bot.sendMessage(user.telegramId, message, {
           parse_mode: 'HTML'
         });
-        console.log(`📨 Notification sent to ${user.firstName}`);
       } catch (error) {
         console.error(`Failed to notify user ${user.telegramId}:`, error);
       }
@@ -685,7 +744,6 @@ export async function notifyUser(telegramId, message, options = {}) {
       parse_mode: 'HTML',
       ...options
     });
-    console.log(`📨 Notification sent to ${telegramId}`);
   } catch (error) {
     console.error(`Failed to notify user ${telegramId}:`, error);
   }
@@ -694,7 +752,7 @@ export async function notifyUser(telegramId, message, options = {}) {
 export default {
   bot,
   handleWebhook,
-  generateInviteLink,
+  generateCoupleLink,
   sendInviteByUsername,
   notifyCoupleMembers,
   notifyUser,
