@@ -255,9 +255,10 @@ export const invitePartner = async (req, res) => {
     const pairingCode = generatePairingCode();
     
     // Check if user already has a pending invite
+    const cleanUsername = username.replace('@', '').trim();
     const existingInvite = await PendingInvite.findOne({
       coupleId: coupleId,
-      username: username.replace('@', '').trim(),
+      username: cleanUsername,
       status: 'pending'
     });
 
@@ -279,7 +280,7 @@ export const invitePartner = async (req, res) => {
     if (result.success) {
       // Update couple with pending invite
       couple.pendingInvite = {
-        username: username.replace('@', '').trim(),
+        username: cleanUsername,
         sentAt: new Date(),
         status: 'pending',
         pairingCode: pairingCode
